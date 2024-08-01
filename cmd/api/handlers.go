@@ -135,13 +135,11 @@ func (app *application) addURLsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var addedURLs []*URLInfo
 	for _, url := range payload.URLs {
-		urlInfo := app.urlManager.AddURL(url)
-		addedURLs = append(addedURLs, urlInfo)
+		app.urlManager.AddURL(url)
 	}
 
-	if err := app.writeJSON(w, http.StatusOK, addedURLs); err != nil {
+	if err := app.writeJSON(w, http.StatusOK, map[string]string{"message": "URLs added successfully"}); err != nil {
 		app.logger.WithError(err).Error("error writing JSON response")
 		err = app.errorJSON(w, err, http.StatusInternalServerError)
 		if err != nil {
