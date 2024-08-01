@@ -18,6 +18,7 @@ func (app *application) routes() http.Handler {
 	mux.Get("/test", app.regularEndpoint)
 
 	mux.Post("/authenticate", app.authenticate)
+	mux.Get("/logout", app.logout)
 
 	mux.Route("/admin", func(mux chi.Router) {
 		mux.Use(jwtauth.Verifier(app.authenticator.TokenAuth()))

@@ -2,7 +2,7 @@
 
 ### Auth
 
-curl -X POST -d "user=admin&pass=password" http://localhost:8080/authenticate
+curl -X POST -d "user=admin@example.com&pass=password" http://localhost:8080/authenticate
 
 ### Test protected ep
 

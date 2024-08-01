@@ -24,7 +24,7 @@ func NewJWTAuthenticator(secret string) *JWTAuthenticator {
 }
 
 func (a *JWTAuthenticator) ValidateUserCredentials(user, pass string) bool {
-	return user == "admin" && pass == "password"
+	return user == "admin@example.com" && pass == "password"
 }
 
 func (a *JWTAuthenticator) GenerateToken(user string) (string, error) {
