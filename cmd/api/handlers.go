@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 )
 
 func (app *application) Home(w http.ResponseWriter, _ *http.Request) {
@@ -20,10 +22,27 @@ func (app *application) Home(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (app *application) authenticate(w http.ResponseWriter, r *http.Request) {
-	user := r.FormValue("user")
-	pass := r.FormValue("pass")
+	// Define a struct to hold the request payload
+	var payload struct {
+		User string `json:"user"`
+		Pass string `json:"pass"`
+	}
 
-	if user == "" || pass == "" {
+	// Decode the JSON request body into the payload struct
+	err := json.NewDecoder(r.Body).Decode(&payload)
+	if err != nil {
+		app.logger.WithError(err).Error("error decoding JSON request body")
+		err = app.errorJSON(w, errors.New("invalid request payload"), http.StatusBadRequest)
+		if err != nil {
+			app.logger.WithError(err).Error("error writing JSON response")
+		}
+		return
+	}
+
+	// Log the user and pass for debugging purposes
+	app.logger.Infof("Received authentication request - user: %s, pass: %s", payload.User, payload.Pass)
+
+	if payload.User == "" || payload.Pass == "" {
 		err := app.errorJSON(w, errors.New("username and password are required"), http.StatusBadRequest)
 		if err != nil {
 			app.logger.WithError(err).Error("error writing JSON response")
@@ -31,7 +50,7 @@ func (app *application) authenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !app.authenticator.ValidateUserCredentials(user, pass) {
+	if !app.authenticator.ValidateUserCredentials(payload.User, payload.Pass) {
 		err := app.errorJSON(w, errors.New(http.StatusText(http.StatusUnauthorized)), http.StatusUnauthorized)
 		if err != nil {
 			app.logger.WithError(err).Error("error writing JSON response")
@@ -39,7 +58,7 @@ func (app *application) authenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokenString, err := app.authenticator.GenerateToken(user)
+	tokenString, err := app.authenticator.GenerateToken(payload.User)
 	if err != nil {
 		app.logger.WithError(err).Error("error generating token")
 		err := app.errorJSON(w, err, http.StatusInternalServerError)
@@ -49,7 +68,35 @@ func (app *application) authenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	http.SetCookie(w, &http.Cookie{
+		Name:     "jwtToken",
+		Value:    tokenString,
+		Expires:  time.Now().Add(24 * time.Hour),
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteStrictMode,
+	})
+
 	if err := app.writeJSON(w, http.StatusOK, map[string]string{"token": tokenString}); err != nil {
+		app.logger.WithError(err).Error("error writing JSON response")
+		err = app.errorJSON(w, err, http.StatusInternalServerError)
+		if err != nil {
+			app.logger.WithError(err).Error("error writing JSON response")
+		}
+	}
+}
+
+func (app *application) logout(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "jwtToken",
+		Value:    "",
+		Expires:  time.Unix(0, 0), // Set the expiration to a past date to invalidate the cookie
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	if err := app.writeJSON(w, http.StatusOK, map[string]string{"message": "logout successful"}); err != nil {
 		app.logger.WithError(err).Error("error writing JSON response")
 		err = app.errorJSON(w, err, http.StatusInternalServerError)
 		if err != nil {

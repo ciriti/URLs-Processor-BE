@@ -1,9 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
+	"strconv"
+	"syscall"
+	"time"
 
 	"backend/internal/auth"
 
@@ -11,15 +16,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const port = 8080
-
 type application struct {
 	authenticator auth.Authenticator
 	logger        *logrus.Logger
 }
 
 func main() {
-	env := os.Getenv("YOURAPP_ENV")
+	env := os.Getenv("APP_ENV")
 	if env == "" {
 		env = "development"
 	}
@@ -29,33 +32,67 @@ func main() {
 		_ = godotenv.Load(".env.local")
 	}
 	_ = godotenv.Load(".env." + env)
-	_ = godotenv.Load() // The Original .env
+	_ = godotenv.Load()
 
-	// Initialize Authenticator
-	authenticator := auth.NewJWTAuthenticator("secret-key")
+	jwtSecret := getEnv("JWT_SECRET", "default-secret")
+	if jwtSecret == "" {
+		logrus.Fatal("JWT_SECRET environment variable is required but not set")
+	}
 
-	// Initialize Logger
+	allowedOrigin := getEnv("ALLOWED_ORIGIN", "")
+	if allowedOrigin == "" {
+		logrus.Fatal("ALLOWED_ORIGIN environment variable is required but not set")
+	}
+
+	portStr := getEnv("PORT", "")
+	port, err := strconv.Atoi(portStr)
+	if err != nil || port < 1 || port > 65535 {
+		logrus.Fatalf("Invalid port number: %v", portStr)
+	}
+
+	authenticator := auth.NewJWTAuthenticator(jwtSecret)
+
 	logger := logrus.New()
 	logger.SetFormatter(&logrus.JSONFormatter{})
 
-	// Create an instance of the application struct
 	app := &application{
 		authenticator: authenticator,
 		logger:        logger,
 	}
 
-	// Test if environment variables are fetched correctly
-	fmt.Println("JWT_SECRET:", getEnv("JWT_SECRET", ""))
-	// fmt.Println("Domain:", app.Domain)
-
 	logger.Println("Starting application on port", port)
 
-	// start webserver already production ready
-	err := http.ListenAndServe(fmt.Sprintf(":%d", port), app.routes())
-	if err != nil {
-		logger.Fatal(err)
+	srv := &http.Server{
+		Addr:    fmt.Sprintf(":%d", port),
+		Handler: app.routes(),
 	}
 
+	go func() {
+		// for production => ListenAndServeTLS
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatalf("Could not listen on %s: %v\n", srv.Addr, err)
+		}
+	}()
+
+	gracefulShutdown(srv, logger)
+
+}
+
+// all in-flight requests are completed before the server stops
+func gracefulShutdown(srv *http.Server, logger *logrus.Logger) {
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	logger.Println("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Fatalf("Server forced to shutdown: %v", err)
+	}
+
+	logger.Println("Server exiting")
 }
 
 func getEnv(key, defaultValue string) string {
