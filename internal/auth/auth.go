@@ -10,15 +10,16 @@ import (
 type Authenticator interface {
 	ValidateUserCredentials(user, pass string) bool
 	GenerateToken(user string) (string, error)
+	TokenAuth() *jwtauth.JWTAuth
 }
 
 type JWTAuthenticator struct {
-	TokenAuth *jwtauth.JWTAuth
+	tokenAuth *jwtauth.JWTAuth
 }
 
 func NewJWTAuthenticator(secret string) *JWTAuthenticator {
 	return &JWTAuthenticator{
-		TokenAuth: jwtauth.New("HS256", []byte(secret), nil),
+		tokenAuth: jwtauth.New("HS256", []byte(secret), nil),
 	}
 }
 
@@ -27,9 +28,13 @@ func (a *JWTAuthenticator) ValidateUserCredentials(user, pass string) bool {
 }
 
 func (a *JWTAuthenticator) GenerateToken(user string) (string, error) {
-	_, tokenString, err := a.TokenAuth.Encode(jwt.MapClaims{
+	_, tokenString, err := a.tokenAuth.Encode(jwt.MapClaims{
 		"user": user,
 		"exp":  time.Now().Add(time.Hour * 72).Unix(), // 72 hours expiration
 	})
 	return tokenString, err
+}
+
+func (a *JWTAuthenticator) TokenAuth() *jwtauth.JWTAuth {
+	return a.tokenAuth
 }

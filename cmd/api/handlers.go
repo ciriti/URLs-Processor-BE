@@ -1,18 +1,8 @@
 package main
 
 import (
-	// "encoding/json"
-	// "errors"
-	// "fmt"
-	// "io"
-	// "log"
 	"errors"
 	"net/http"
-	// "net/url"
-	// "strconv"
-	// "time"
-	// "github.com/go-chi/chi/v5"
-	// "github.com/golang-jwt/jwt/v4"
 )
 
 func (app *application) Home(w http.ResponseWriter, _ *http.Request) {
@@ -65,5 +55,19 @@ func (app *application) authenticate(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			app.logger.WithError(err).Error("error writing JSON response")
 		}
+	}
+}
+
+func (app *application) adminEndpoint(w http.ResponseWriter, r *http.Request) {
+	_, err := w.Write([]byte("This is a protected endpoint"))
+	if err != nil {
+		app.logger.WithError(err).Error("error writing JSON response")
+	}
+}
+
+func (app *application) regularEndpoint(w http.ResponseWriter, r *http.Request) {
+	_, err := w.Write([]byte("This is a regular endpoint"))
+	if err != nil {
+		app.logger.WithError(err).Error("error writing JSON response")
 	}
 }

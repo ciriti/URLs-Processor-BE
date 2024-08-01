@@ -5,12 +5,15 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/go-chi/jwtauth"
 )
 
 // MockAuthenticator is a mock implementation of the Authenticator interface
 type MockAuthenticator struct {
 	ValidateCredentialsFunc func(user, pass string) bool
 	GenerateTokenFunc       func(user string) (string, error)
+	TokenAuthInstance       *jwtauth.JWTAuth
 }
 
 func (m *MockAuthenticator) ValidateUserCredentials(user, pass string) bool {
@@ -19,6 +22,10 @@ func (m *MockAuthenticator) ValidateUserCredentials(user, pass string) bool {
 
 func (m *MockAuthenticator) GenerateToken(user string) (string, error) {
 	return m.GenerateTokenFunc(user)
+}
+
+func (m *MockAuthenticator) TokenAuth() *jwtauth.JWTAuth {
+	return m.TokenAuthInstance
 }
 
 func TestAuthenticateValidCredentials(t *testing.T) {
