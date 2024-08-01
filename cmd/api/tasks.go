@@ -7,13 +7,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type TaskState string
+
 type Task struct {
-	ID      int
-	URL     string
-	Result  *DataInfo
-	Err     error
-	Done    chan bool
-	Stopped bool
+	ID     int
+	URL    string
+	Result *DataInfo
+	Err    error
+	State  URLState
+	Done   chan struct{}
 }
 
 type TaskQueueInterface interface {
@@ -51,62 +53,53 @@ func (tq *TaskQueue) worker() {
 
 func (tq *TaskQueue) processTask(task Task) {
 	tq.logger.Infof("Processing task ID: %d, URL: %s", task.ID, task.URL)
-	// Update URL state to Processing
+	task.State = Processing
 	tq.urlManager.UpdateURLState(task.ID, Processing)
 
-	// Simulate processing (replace with actual processing logic)
 	data, err := processURL(task.URL, &task, tq.logger)
 
-	if task.Stopped {
+	if task.State == Stopped {
 		tq.urlManager.UpdateURLState(task.ID, Stopped)
 	} else {
 		task.Result = data
 		task.Err = err
 
-		// Update the URLManager with the result
 		if err == nil {
+			task.State = Completed
 			tq.urlManager.UpdateProcessedData(task.ID, data)
 		} else {
+			task.State = Stopped
 			tq.urlManager.UpdateURLState(task.ID, Stopped)
 		}
 	}
 
-	// Signal that the task is done
-	task.Done <- true
+	close(task.Done)
 }
 
 func (tq *TaskQueue) StopTask(id int) {
 	tq.urlManager.UpdateURLState(id, Stopped)
-	for task := range tq.tasks {
-		if task.ID == id {
-			task.Stopped = true
-			break
-		}
-	}
 }
 
 func (tq *TaskQueue) AddTask(urlInfo *URLInfo) Task {
 	task := Task{
-		ID:   urlInfo.ID,
-		URL:  urlInfo.URL,
-		Done: make(chan bool),
+		ID:    urlInfo.ID,
+		URL:   urlInfo.URL,
+		State: Pending,
+		Done:  make(chan struct{}),
 	}
 	tq.tasks <- task
 	return task
 }
 
 func processURL(url string, task *Task, logger *logrus.Logger) (*DataInfo, error) {
+	for i := 0; i < 10; i++ {
+		time.Sleep(1 * time.Second)
 
-	// Simulate fetching and processing the URL with periodic checks for stop signal
-	for i := 0; i < 5; i++ {
-		time.Sleep(1 * time.Second) // Simulate delay
-
-		if task.Stopped {
+		if task.State == Stopped {
 			return nil, errors.New("task stopped")
 		}
 	}
 
-	// Replace this with actual URL processing logic
 	data := &DataInfo{
 		HTMLVersion:       "HTML5",
 		PageTitle:         "Example Page",

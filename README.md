@@ -35,9 +35,5 @@ curl -X GET -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJle
 ### StartComputation
 
 curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MjI3Nzc1NTcsInVzZXIiOiJhZG1pbkBleGFtcGxlLmNvbSJ9.3lhCE9AHyp0uf-lZasZLTqsWnDMqPBnDH42vs0LHh61" -d '{
-"url": "http://example.com"
-}' http://localhost:8080/api/startComputation
-
-curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MjI3Nzc1NTcsInVzZXIiOiJhZG1pbkBleGFtcGxlLmNvbSJ9.3lhCE9AHyp0uf-lZasZLTqsWnDMqPBnDH42vs0LHh61" -d '{
 "id": 1
 }' http://localhost:8080/api/startComputation
