@@ -2,7 +2,11 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"net/http"
 	"os"
+
+	"backend/internal/auth"
 
 	"github.com/joho/godotenv"
 )
@@ -10,15 +14,7 @@ import (
 const port = 8080
 
 type application struct {
-	DSN    string
-	Domain string
-	// DB           repository.DatabaseRepo
-	// auth         Authenticator // Use the interface here
-	JWTSecret    string
-	JWTIssuer    string
-	JWTAudience  string
-	CookieDomain string
-	APIKey       string
+    authenticator auth.Authenticator
 }
 
 func main() {
@@ -34,25 +30,25 @@ func main() {
 	_ = godotenv.Load(".env." + env)
 	_ = godotenv.Load() // The Original .env
 
+	// Initialize Authenticator
+	authenticator := auth.NewJWTAuthenticator("secret-key")
+
 	// Create an instance of the application struct
-	app := application{
-		DSN:          getEnv("DSN", ""),
-		Domain:       getEnv("DOMAIN", ""),
-		JWTSecret:    getEnv("JWT_SECRET", ""),
-		JWTIssuer:    getEnv("JWT_ISSUER", ""),
-		JWTAudience:  getEnv("JWT_AUDIENCE", ""),
-		CookieDomain: getEnv("COOKIE_DOMAIN", ""),
-		APIKey:       getEnv("API_KEY", ""),
+	app := &application{
+		authenticator: authenticator,
 	}
 
 	// Test if environment variables are fetched correctly
-	fmt.Println("DSN:", app.DSN)
-	fmt.Println("Domain:", app.Domain)
-	fmt.Println("JWTSecret:", app.JWTSecret)
-	fmt.Println("JWTIssuer:", app.JWTIssuer)
-	fmt.Println("JWTAudience:", app.JWTAudience)
-	fmt.Println("CookieDomain:", app.CookieDomain)
-	fmt.Println("APIKey:", app.APIKey)
+	fmt.Println("JWT_SECRET:", getEnv("JWT_SECRET", ""))
+	// fmt.Println("Domain:", app.Domain)
+
+	log.Println("Starting application on port", port)
+
+	// start webserver already production ready
+	err := http.ListenAndServe(fmt.Sprintf(":%d", port), app.routes())
+	if err != nil {
+		log.Fatal(err)
+	}
 
 }
 
