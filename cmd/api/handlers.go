@@ -7,7 +7,6 @@ import (
 	// "io"
 	// "log"
 	"errors"
-	"log"
 	"net/http"
 	// "net/url"
 	// "strconv"
@@ -35,36 +34,36 @@ func (app *application) authenticate(w http.ResponseWriter, r *http.Request) {
 	pass := r.FormValue("pass")
 
 	if user == "" || pass == "" {
-        err := app.errorJSON(w, errors.New("username and password are required"), http.StatusBadRequest)
-        if err != nil {
-            log.Printf("error writing JSON response: %v", err)
-        }
-        return
-    }
+		err := app.errorJSON(w, errors.New("username and password are required"), http.StatusBadRequest)
+		if err != nil {
+			app.logger.WithError(err).Error("error writing JSON response")
+		}
+		return
+	}
 
 	if !app.authenticator.ValidateUserCredentials(user, pass) {
 		err := app.errorJSON(w, errors.New(http.StatusText(http.StatusUnauthorized)), http.StatusUnauthorized)
 		if err != nil {
-			log.Printf("error writing JSON response: %v", err)
+			app.logger.WithError(err).Error("error writing JSON response")
 		}
 		return
 	}
 
 	tokenString, err := app.authenticator.GenerateToken(user)
 	if err != nil {
-		log.Printf("error generating token: %v", err)
+		app.logger.WithError(err).Error("error generating token")
 		err := app.errorJSON(w, err, http.StatusInternalServerError)
 		if err != nil {
-			log.Printf("error writing JSON response: %v", err)
+			app.logger.WithError(err).Error("error writing JSON response")
 		}
 		return
 	}
 
 	if err := app.writeJSON(w, http.StatusOK, map[string]string{"token": tokenString}); err != nil {
-		log.Printf("error writing JSON response: %v", err)
+		app.logger.WithError(err).Error("error writing JSON response")
 		err = app.errorJSON(w, err, http.StatusInternalServerError)
 		if err != nil {
-			log.Printf("error writing JSON response: %v", err)
+			app.logger.WithError(err).Error("error writing JSON response")
 		}
 	}
 }
