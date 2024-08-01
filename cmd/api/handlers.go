@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -116,5 +117,82 @@ func (app *application) regularEndpoint(w http.ResponseWriter, r *http.Request) 
 	_, err := w.Write([]byte("This is a regular endpoint"))
 	if err != nil {
 		app.logger.WithError(err).Error("error writing JSON response")
+	}
+}
+
+func (app *application) addURLsHandler(w http.ResponseWriter, r *http.Request) {
+	var payload struct {
+		URLs []string `json:"urls"`
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&payload)
+	if err != nil {
+		app.logger.WithError(err).Error("error decoding JSON request body")
+		err = app.errorJSON(w, errors.New("invalid request payload"), http.StatusBadRequest)
+		if err != nil {
+			app.logger.WithError(err).Error("error writing JSON response")
+		}
+		return
+	}
+
+	for _, url := range payload.URLs {
+		app.urlManager.AddURL(url)
+	}
+
+	if err := app.writeJSON(w, http.StatusOK, map[string]string{"message": "URLs added successfully"}); err != nil {
+		app.logger.WithError(err).Error("error writing JSON response")
+		err = app.errorJSON(w, err, http.StatusInternalServerError)
+		if err != nil {
+			app.logger.WithError(err).Error("error writing JSON response")
+		}
+	}
+}
+
+func (app *application) getURLHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Query().Get("id")
+	if idStr == "" {
+		err := app.errorJSON(w, errors.New("missing url id parameter"), http.StatusBadRequest)
+		if err != nil {
+			app.logger.Println("error writing JSON response:", err)
+		}
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		err := app.errorJSON(w, errors.New("invalid url id parameter"), http.StatusBadRequest)
+		if err != nil {
+			app.logger.Println("error writing JSON response:", err)
+		}
+		return
+	}
+
+	urlInfo := app.urlManager.GetURLInfo(id)
+	if urlInfo == nil {
+		err := app.errorJSON(w, errors.New("URL not found"), http.StatusNotFound)
+		if err != nil {
+			app.logger.Println("error writing JSON response:", err)
+		}
+		return
+	}
+
+	if err := app.writeJSON(w, http.StatusOK, urlInfo); err != nil {
+		app.logger.Println("error writing JSON response:", err)
+		err = app.errorJSON(w, err, http.StatusInternalServerError)
+		if err != nil {
+			app.logger.Println("error writing JSON response:", err)
+		}
+	}
+}
+
+func (app *application) getAllURLsHandler(w http.ResponseWriter, r *http.Request) {
+	urls := app.urlManager.GetAllURLs()
+
+	if err := app.writeJSON(w, http.StatusOK, urls); err != nil {
+		app.logger.WithError(err).Error("error writing JSON response")
+		err = app.errorJSON(w, err, http.StatusInternalServerError)
+		if err != nil {
+			app.logger.WithError(err).Error("error writing JSON response")
+		}
 	}
 }

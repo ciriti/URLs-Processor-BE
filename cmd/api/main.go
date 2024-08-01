@@ -19,6 +19,7 @@ import (
 type application struct {
 	authenticator auth.Authenticator
 	logger        *logrus.Logger
+	urlManager    *URLManager
 }
 
 func main() {
@@ -55,9 +56,12 @@ func main() {
 	logger := logrus.New()
 	logger.SetFormatter(&logrus.JSONFormatter{})
 
+	urlManager := NewURLManager()
+
 	app := &application{
 		authenticator: authenticator,
 		logger:        logger,
+		urlManager:    urlManager,
 	}
 
 	logger.Println("Starting application on port", port)

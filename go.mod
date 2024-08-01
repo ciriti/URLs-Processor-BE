@@ -6,6 +6,7 @@ require (
 	github.com/go-chi/chi/v5 v5.1.0 // indirect
 	github.com/go-chi/jwtauth v1.2.0 // indirect
 	github.com/goccy/go-json v0.3.5 // indirect
+	github.com/gofrs/uuid v4.4.0+incompatible // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/lestrrat-go/backoff/v2 v2.0.7 // indirect
