@@ -16,6 +16,11 @@ type Task struct {
 	Stopped bool
 }
 
+type TaskQueueInterface interface {
+	AddTask(urlInfo *URLInfo) Task
+	StopTask(id int)
+}
+
 type TaskQueue struct {
 	tasks       chan Task
 	workerCount int

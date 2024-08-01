@@ -33,6 +33,15 @@ type DataInfo struct {
 	ProcessingFinished time.Time      `json:"processing_finished"`
 }
 
+type URLManagerInterface interface {
+	AddURL(url string) *URLInfo
+	UpdateURLState(id int, state URLState)
+	UpdateProcessedData(id int, data *DataInfo)
+	GetURLInfo(id int) *URLInfo
+	GetAllURLs() []*URLInfo
+	nextID() int
+}
+
 type URLManager struct {
 	mu           sync.RWMutex
 	urls         map[int]*URLInfo
