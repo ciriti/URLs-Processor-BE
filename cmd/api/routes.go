@@ -24,9 +24,12 @@ func (app *application) routes() http.Handler {
 		mux.Use(jwtauth.Verifier(app.authenticator.TokenAuth()))
 		mux.Use(jwtauth.Authenticator)
 
-		mux.Post("/urls", app.addURLsHandler)
-		mux.Get("/urls", app.getAllURLsHandler)
-		mux.Get("/url", app.getURLHandler)
+		mux.Post("/urls", app.addURLs)
+		mux.Get("/urls", app.getAllURLs)
+		mux.Get("/url", app.getURL)
+		mux.Post("/startComputation", app.startComputation)
+		mux.Post("/stopComputation", app.stopComputation)
+		mux.Get("/checkStatus", app.checkStatus)
 
 		mux.Get("/test-protected", app.adminEndpoint)
 	})

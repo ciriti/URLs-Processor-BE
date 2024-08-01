@@ -20,6 +20,7 @@ type application struct {
 	authenticator auth.Authenticator
 	logger        *logrus.Logger
 	urlManager    *URLManager
+	taskQueue     *TaskQueue
 }
 
 func main() {
@@ -58,10 +59,13 @@ func main() {
 
 	urlManager := NewURLManager()
 
+	taskQueue := NewTaskQueue(5, urlManager, logger)
+
 	app := &application{
 		authenticator: authenticator,
 		logger:        logger,
 		urlManager:    urlManager,
+		taskQueue:     taskQueue,
 	}
 
 	logger.Println("Starting application on port", port)
