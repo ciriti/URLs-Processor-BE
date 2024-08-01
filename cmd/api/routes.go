@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/jwtauth"
 )
 
 func (app *application) routes() http.Handler {
@@ -14,25 +15,15 @@ func (app *application) routes() http.Handler {
 	mux.Use(app.enableCORS)
 
 	mux.Get("/", app.Home)
+	mux.Get("/test", app.regularEndpoint)
 
-	// mux.Post("/authenticate", app.authenticate)
-	// mux.Get("/refresh", app.refreshToken)
-	// mux.Get("/logout", app.logout)
+	mux.Post("/authenticate", app.authenticate)
 
-	// mux.Get("/movies", app.AllMovies)
-	// mux.Get("/movies/{id}", app.GetMovie)
-
-	// mux.Get("/genres", app.AllGenres)
-
-	// mux.Route("/admin", func(mux chi.Router) {
-	// 	mux.Use(app.authRequired)
-
-	// 	mux.Get("/movies", app.MovieCatalog)
-	// 	mux.Get("/movies/{id}", app.MovieForEdit)
-	// 	mux.Put("/movies/0", app.InsertMovie)
-	// 	mux.Patch("/movies/{id}", app.UpdateMovie)
-	// 	mux.Delete("/movies/{id}", app.DeleteMovie)
-	// })
+	mux.Route("/admin", func(mux chi.Router) {
+		mux.Use(jwtauth.Verifier(app.authenticator.TokenAuth()))
+		mux.Use(jwtauth.Authenticator)
+		mux.Get("/test-protected", app.adminEndpoint)
+	})
 
 	return (mux)
 }
