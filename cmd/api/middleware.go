@@ -1,10 +1,19 @@
 package main
 
-import "net/http"
+import (
+	"net/http"
+)
 
 func (app *application) enableCORS(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		allowedOrigin := getEnv("ALLOWED_ORIGIN", "http://allowed-origin.com")
+
+		// TODO Check if the origin of the request matches the allowed origin specified
+		// TODO in the environment variable. If it matches, set the Access-Control-Allow-Origin
+		// TODO header to the origin of the request.
+
+		w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
 
 		if r.Method == "OPTIONS" {
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
