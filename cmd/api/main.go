@@ -22,7 +22,7 @@ type application struct {
 }
 
 func main() {
-	env := os.Getenv("YOURAPP_ENV")
+	env := os.Getenv("APP_ENV")
 	if env == "" {
 		env = "development"
 	}
