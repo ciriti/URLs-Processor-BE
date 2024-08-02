@@ -12,6 +12,7 @@ const (
 	Processing URLState = "processing"
 	Stopped    URLState = "stopped"
 	Completed  URLState = "completed"
+	Failed     URLState = "failed"
 )
 
 type URLInfo struct {

@@ -23,13 +23,12 @@ func (app *application) Home(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (app *application) authenticate(w http.ResponseWriter, r *http.Request) {
-	// Define a struct to hold the request payload
+
 	var payload struct {
 		User string `json:"user"`
 		Pass string `json:"pass"`
 	}
 
-	// Decode the JSON request body into the payload struct
 	err := json.NewDecoder(r.Body).Decode(&payload)
 	if err != nil {
 		app.logger.WithError(err).Error("error decoding JSON request body")
@@ -40,7 +39,6 @@ func (app *application) authenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Log the user and pass for debugging purposes
 	app.logger.Infof("Received authentication request - user: %s, pass: %s", payload.User, payload.Pass)
 
 	if payload.User == "" || payload.Pass == "" {
@@ -91,7 +89,7 @@ func (app *application) logout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "jwtToken",
 		Value:    "",
-		Expires:  time.Unix(0, 0), // Set the expiration to a past date to invalidate the cookie
+		Expires:  time.Unix(0, 0),
 		HttpOnly: true,
 		Secure:   true,
 		SameSite: http.SameSiteStrictMode,
@@ -137,6 +135,7 @@ func (app *application) addURLs(w http.ResponseWriter, r *http.Request) {
 
 	for _, url := range payload.URLs {
 		app.urlManager.AddURL(url)
+		app.logger.Infof("Adding URL: %s", url)
 	}
 
 	if err := app.writeJSON(w, http.StatusOK, map[string]string{"message": "URLs added successfully"}); err != nil {
@@ -222,7 +221,15 @@ func (app *application) startComputation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	task := app.taskQueue.AddTask(urlInfo)
+	task, err := app.taskQueue.AddTask(urlInfo)
+	if err != nil {
+		app.logger.WithError(err).Error("task already in progress")
+		err = app.errorJSON(w, errors.New("task already in progress"), http.StatusConflict)
+		if err != nil {
+			app.logger.WithError(err).Error("error writing JSON response")
+		}
+		return
+	}
 
 	if err := app.writeJSON(w, http.StatusOK, map[string]interface{}{"task_id": task.ID, "state": urlInfo.State}); err != nil {
 		app.logger.WithError(err).Error("error writing JSON response")
@@ -261,6 +268,8 @@ func (app *application) checkStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	app.logger.Infof("Task ID: %d, Status: %s", urlInfo.ID, urlInfo.State)
+
 	if err := app.writeJSON(w, http.StatusOK, urlInfo); err != nil {
 		app.logger.Println("error writing JSON response:", err)
 		err = app.errorJSON(w, err, http.StatusInternalServerError)
@@ -271,31 +280,28 @@ func (app *application) checkStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) stopComputation(w http.ResponseWriter, r *http.Request) {
-	idStr := r.URL.Query().Get("id")
-	if idStr == "" {
-		err := app.errorJSON(w, errors.New("missing url id parameter"), http.StatusBadRequest)
-		if err != nil {
-			app.logger.Println("error writing JSON response:", err)
-		}
-		return
+	var payload struct {
+		TaskID int `json:"task_id"`
 	}
 
-	id, err := strconv.Atoi(idStr)
+	err := json.NewDecoder(r.Body).Decode(&payload)
 	if err != nil {
-		err := app.errorJSON(w, errors.New("invalid url id parameter"), http.StatusBadRequest)
+		app.logger.WithError(err).Error("error decoding JSON request body")
+		err = app.errorJSON(w, errors.New("invalid request payload"), http.StatusBadRequest)
 		if err != nil {
-			app.logger.Println("error writing JSON response:", err)
+			app.logger.WithError(err).Error("error writing JSON response")
 		}
 		return
 	}
 
-	app.taskQueue.StopTask(id)
+	app.logger.Infof("Stopping task - task_id: %d", payload.TaskID)
+	app.taskQueue.StopTask(payload.TaskID)
 
-	if err := app.writeJSON(w, http.StatusOK, map[string]string{"message": "task stopped"}); err != nil {
-		app.logger.Println("error writing JSON response:", err)
+	if err := app.writeJSON(w, http.StatusOK, map[string]string{"message": "Task stop signal sent successfully"}); err != nil {
+		app.logger.WithError(err).Error("error writing JSON response")
 		err = app.errorJSON(w, err, http.StatusInternalServerError)
 		if err != nil {
-			app.logger.Println("error writing JSON response:", err)
+			app.logger.WithError(err).Error("error writing JSON response")
 		}
 	}
 }

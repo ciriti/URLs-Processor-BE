@@ -10,7 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// MockAuthenticator is a mock implementation of the Authenticator interface
+
 type MockAuthenticator struct {
 	ValidateCredentialsFunc func(user, pass string) bool
 	GenerateTokenFunc       func(user string) (string, error)
