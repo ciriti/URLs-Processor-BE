@@ -143,15 +143,15 @@ func (m *MockURLManager) GetAllURLs() []*URLInfo {
 
 type MockTaskQueue struct {
 	AddTaskFunc  func(urlInfo *URLInfo) (*Task, error)
-	StopTaskFunc func(id int)
+	StopTaskFunc func(id int) (*Task, error)
 }
 
 func (m *MockTaskQueue) AddTask(urlInfo *URLInfo) (*Task, error) {
 	return m.AddTaskFunc(urlInfo)
 }
 
-func (m *MockTaskQueue) StopTask(id int) {
-	m.StopTaskFunc(id)
+func (m *MockTaskQueue) StopTask(id int) (*Task, error) {
+	return m.StopTaskFunc(id)
 }
 
 func (m *MockURLManager) nextID() int {
@@ -193,7 +193,7 @@ func TestStartComputation(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	expected := map[string]interface{}{"task_id": float64(1), "state": "pending"}
+	expected := map[string]interface{}{"id": float64(1), "state": "pending"}
 	var response map[string]interface{}
 	if err := json.NewDecoder(rr.Body).Decode(&response); err != nil {
 		t.Fatalf("error decoding response body: %v", err)

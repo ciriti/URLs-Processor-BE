@@ -196,50 +196,6 @@ func (app *application) getAllURLs(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (app *application) startComputation(w http.ResponseWriter, r *http.Request) {
-	var payload struct {
-		ID int `json:"id"`
-	}
-
-	err := json.NewDecoder(r.Body).Decode(&payload)
-	if err != nil {
-		app.logger.WithError(err).Error("error decoding JSON request body")
-		err = app.errorJSON(w, errors.New("invalid request payload"), http.StatusBadRequest)
-		if err != nil {
-			app.logger.WithError(err).Error("error writing JSON response")
-		}
-		return
-	}
-
-	urlInfo := app.urlManager.GetURLInfo(payload.ID)
-	if urlInfo == nil {
-		app.logger.WithError(err).Error("URL not found")
-		err = app.errorJSON(w, errors.New("URL not found"), http.StatusNotFound)
-		if err != nil {
-			app.logger.WithError(err).Error("error writing JSON response")
-		}
-		return
-	}
-
-	task, err := app.taskQueue.AddTask(urlInfo)
-	if err != nil {
-		app.logger.WithError(err).Error("task already in progress")
-		err = app.errorJSON(w, errors.New("task already in progress"), http.StatusConflict)
-		if err != nil {
-			app.logger.WithError(err).Error("error writing JSON response")
-		}
-		return
-	}
-
-	if err := app.writeJSON(w, http.StatusOK, map[string]interface{}{"task_id": task.ID, "state": urlInfo.State}); err != nil {
-		app.logger.WithError(err).Error("error writing JSON response")
-		err = app.errorJSON(w, err, http.StatusInternalServerError)
-		if err != nil {
-			app.logger.WithError(err).Error("error writing JSON response")
-		}
-	}
-}
-
 func (app *application) checkStatus(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
@@ -279,9 +235,9 @@ func (app *application) checkStatus(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (app *application) stopComputation(w http.ResponseWriter, r *http.Request) {
+func (app *application) startComputation(w http.ResponseWriter, r *http.Request) {
 	var payload struct {
-		TaskID int `json:"task_id"`
+		ID int `json:"id"`
 	}
 
 	err := json.NewDecoder(r.Body).Decode(&payload)
@@ -294,10 +250,27 @@ func (app *application) stopComputation(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	app.logger.Infof("Stopping task - task_id: %d", payload.TaskID)
-	app.taskQueue.StopTask(payload.TaskID)
+	urlInfo := app.urlManager.GetURLInfo(payload.ID)
+	if urlInfo == nil {
+		app.logger.WithError(err).Error("URL not found")
+		err = app.errorJSON(w, errors.New("URL not found"), http.StatusNotFound)
+		if err != nil {
+			app.logger.WithError(err).Error("error writing JSON response")
+		}
+		return
+	}
 
-	if err := app.writeJSON(w, http.StatusOK, map[string]string{"message": "Task stop signal sent successfully"}); err != nil {
+	task, err := app.taskQueue.AddTask(urlInfo)
+	if err != nil {
+		app.logger.WithError(err).Error("task already in progress")
+		err = app.errorJSON(w, errors.New("task already in progress"), http.StatusConflict)
+		if err != nil {
+			app.logger.WithError(err).Error("error writing JSON response")
+		}
+		return
+	}
+
+	if err := app.writeJSON(w, http.StatusOK, map[string]interface{}{"id": task.ID, "state": urlInfo.State}); err != nil {
 		app.logger.WithError(err).Error("error writing JSON response")
 		err = app.errorJSON(w, err, http.StatusInternalServerError)
 		if err != nil {
@@ -305,3 +278,45 @@ func (app *application) stopComputation(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 }
+
+func (app *application) stopComputation(w http.ResponseWriter, r *http.Request) {
+	var payload struct {
+		TaskID int `json:"id"`
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&payload)
+	if err != nil {
+		app.logger.WithError(err).Error("error decoding JSON request body")
+		err = app.errorJSON(w, errors.New("invalid request payload"), http.StatusBadRequest)
+		if err != nil {
+			app.logger.WithError(err).Error("error writing JSON response")
+		}
+		return
+	}
+
+	app.logger.Infof("Stopping task - id: %d", payload.TaskID)
+	task, err := app.taskQueue.StopTask(payload.TaskID)
+	if err != nil {
+		app.logger.WithError(err).Error("task not found or could not be stopped")
+		err = app.errorJSON(w, err, http.StatusNotFound)
+		if err != nil {
+			app.logger.WithError(err).Error("error writing JSON response")
+		}
+		return
+	}
+
+	response := map[string]interface{}{
+		"id":      task.ID,
+		"state":   task.State,
+		"message": "Task stop signal sent successfully",
+	}
+
+	if err := app.writeJSON(w, http.StatusOK, response); err != nil {
+		app.logger.WithError(err).Error("error writing JSON response")
+		err = app.errorJSON(w, err, http.StatusInternalServerError)
+		if err != nil {
+			app.logger.WithError(err).Error("error writing JSON response")
+		}
+	}
+}
+

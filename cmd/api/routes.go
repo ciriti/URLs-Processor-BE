@@ -27,8 +27,8 @@ func (app *application) routes() http.Handler {
 		mux.Post("/urls", app.addURLs)
 		mux.Get("/urls", app.getAllURLs)
 		mux.Get("/url", app.getURL)
-		mux.Post("/startComputation", app.startComputation)
-		mux.Post("/stopComputation", app.stopComputation)
+		mux.Post("/start", app.startComputation)
+		mux.Post("/stop", app.stopComputation)
 		mux.Get("/checkStatus", app.checkStatus)
 
 		mux.Get("/test-protected", app.adminEndpoint)

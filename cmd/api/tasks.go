@@ -20,7 +20,7 @@ type Task struct {
 
 type TaskQueueInterface interface {
 	AddTask(urlInfo *URLInfo) (*Task, error)
-	StopTask(id int)
+	StopTask(id int) (*Task, error)
 }
 
 type TaskQueue struct {
@@ -86,7 +86,7 @@ func (tq *TaskQueue) processTask(task *Task) {
 	task.Done = true
 }
 
-func (tq *TaskQueue) StopTask(id int) {
+func (tq *TaskQueue) StopTask(id int) (*Task, error) {
 	tq.mu.Lock()
 	defer tq.mu.Unlock()
 	if task, exists := tq.tasks[id]; exists {
@@ -97,6 +97,10 @@ func (tq *TaskQueue) StopTask(id int) {
 		} else {
 			tq.logger.Warnf("Task ID: %d already stopped or completed", task.ID)
 		}
+		return task, nil
+	} else {
+		tq.logger.Warnf("Task ID: %d not found", id)
+		return nil, errors.New("task not found")
 	}
 }
 
