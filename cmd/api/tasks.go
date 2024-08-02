@@ -125,7 +125,7 @@ func (tq *TaskQueue) AddTask(urlInfo *URLInfo) (*Task, error) {
 }
 
 func processURL(url string, task *Task, logger *logrus.Logger) (*DataInfo, error) {
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 15; i++ {
 		time.Sleep(1 * time.Second)
 
 		if task.Stop {
