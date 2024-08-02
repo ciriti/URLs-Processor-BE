@@ -144,6 +144,7 @@ func (m *MockURLManager) GetAllURLs() []*URLInfo {
 type MockTaskQueue struct {
 	AddTaskFunc  func(urlInfo *URLInfo) (*Task, error)
 	StopTaskFunc func(id int) (*Task, error)
+	GetTaskFunc  func(id int) (*Task, error)
 }
 
 func (m *MockTaskQueue) AddTask(urlInfo *URLInfo) (*Task, error) {
@@ -156,6 +157,10 @@ func (m *MockTaskQueue) StopTask(id int) (*Task, error) {
 
 func (m *MockURLManager) nextID() int {
 	return m.nextIDFunc()
+}
+
+func (m *MockTaskQueue) GetTask(id int) (*Task, error) {
+	return m.GetTaskFunc(id)
 }
 
 func TestStartComputation(t *testing.T) {

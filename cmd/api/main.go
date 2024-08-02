@@ -59,7 +59,7 @@ func main() {
 
 	urlManager := NewURLManager()
 
-	taskQueue := NewTaskQueue(5, urlManager, logger)
+	taskQueue := NewTaskQueue(2, urlManager, logger)
 
 	app := &application{
 		authenticator: authenticator,

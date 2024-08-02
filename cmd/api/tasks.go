@@ -21,6 +21,7 @@ type Task struct {
 type TaskQueueInterface interface {
 	AddTask(urlInfo *URLInfo) (*Task, error)
 	StopTask(id int) (*Task, error)
+	GetTask(id int) (*Task, error)
 }
 
 type TaskQueue struct {
@@ -29,6 +30,7 @@ type TaskQueue struct {
 	urlManager  *URLManager
 	logger      *logrus.Logger
 	mu          sync.Mutex
+	sem         chan struct{}
 }
 
 func NewTaskQueue(workerCount int, urlManager *URLManager, logger *logrus.Logger) *TaskQueue {
@@ -37,6 +39,7 @@ func NewTaskQueue(workerCount int, urlManager *URLManager, logger *logrus.Logger
 		workerCount: workerCount,
 		urlManager:  urlManager,
 		logger:      logger,
+		sem:         make(chan struct{}, workerCount), // Initialize semaphore
 	}
 
 	for i := 0; i < workerCount; i++ {
@@ -48,15 +51,27 @@ func NewTaskQueue(workerCount int, urlManager *URLManager, logger *logrus.Logger
 
 func (tq *TaskQueue) worker() {
 	for {
+		tq.sem <- struct{}{} // Acquire a semaphore
 		tq.mu.Lock()
+		var taskToProcess *Task
 		for _, task := range tq.tasks {
 			if task.State == Pending {
 				task.State = Processing
-				go tq.processTask(task)
+				taskToProcess = task
+				break
 			}
 		}
 		tq.mu.Unlock()
-		time.Sleep(1 * time.Second)
+
+		if taskToProcess != nil {
+			go func(task *Task) {
+				tq.processTask(task)
+				<-tq.sem // Release the semaphore
+			}(taskToProcess)
+		} else {
+			<-tq.sem // Release the semaphore if no task to process
+			time.Sleep(1 * time.Second)
+		}
 	}
 }
 
@@ -124,8 +139,17 @@ func (tq *TaskQueue) AddTask(urlInfo *URLInfo) (*Task, error) {
 	return task, nil
 }
 
+func (tq *TaskQueue) GetTask(id int) (*Task, error) {
+	tq.mu.Lock()
+	defer tq.mu.Unlock()
+	if task, exists := tq.tasks[id]; exists {
+		return task, nil
+	}
+	return nil, errors.New("task not found")
+}
+
 func processURL(url string, task *Task, logger *logrus.Logger) (*DataInfo, error) {
-	for i := 0; i < 15; i++ {
+	for i := 0; i < 5; i++ {
 		time.Sleep(1 * time.Second)
 
 		if task.Stop {
