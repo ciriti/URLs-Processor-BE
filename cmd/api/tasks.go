@@ -18,6 +18,11 @@ type Task struct {
 	Stop   bool
 }
 
+type TaskQueueInterface interface {
+	AddTask(urlInfo *URLInfo) (*Task, error)
+	StopTask(id int)
+}
+
 type TaskQueue struct {
 	tasks       map[int]*Task
 	workerCount int
@@ -51,7 +56,7 @@ func (tq *TaskQueue) worker() {
 			}
 		}
 		tq.mu.Unlock()
-		time.Sleep(1 * time.Second) 
+		time.Sleep(1 * time.Second)
 	}
 }
 
@@ -99,7 +104,6 @@ func (tq *TaskQueue) AddTask(urlInfo *URLInfo) (*Task, error) {
 	tq.mu.Lock()
 	defer tq.mu.Unlock()
 
-	
 	if task, exists := tq.tasks[urlInfo.ID]; exists && task.State != Completed && task.State != Stopped {
 		return task, errors.New("task already in progress")
 	}
@@ -118,7 +122,7 @@ func (tq *TaskQueue) AddTask(urlInfo *URLInfo) (*Task, error) {
 
 func processURL(url string, task *Task, logger *logrus.Logger) (*DataInfo, error) {
 	for i := 0; i < 5; i++ {
-		time.Sleep(1 * time.Second) 
+		time.Sleep(1 * time.Second)
 
 		if task.Stop {
 			logger.Infof("Task ID: %d processing stopped", task.ID)

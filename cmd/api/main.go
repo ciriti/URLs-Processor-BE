@@ -19,8 +19,8 @@ import (
 type application struct {
 	authenticator auth.Authenticator
 	logger        *logrus.Logger
-	urlManager    *URLManager
-	taskQueue     *TaskQueue
+	urlManager    URLManagerInterface
+	taskQueue     TaskQueueInterface
 }
 
 func main() {
