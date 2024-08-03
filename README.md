@@ -1,50 +1,63 @@
-# CURLS
+[![Lint](https://github.com/ciriti/URLs-Processor-BE/actions/workflows/lint.yaml/badge.svg)](https://github.com/ciriti/URLs-Processor-BE/actions/workflows/lint.yaml)
+[![Run Go Tests](https://github.com/ciriti/URLs-Processor-BE/actions/workflows/go-tests.yml/badge.svg)](https://github.com/ciriti/URLs-Processor-BE/actions/workflows/go-tests.yml)
 
-### Auth
+# URLs Processor
 
-curl -X POST -H "Content-Type: application/json" -d '{ "user": "admin@example.com", "pass": "password" }' http://localhost:8080/authenticate
+## Installation
 
-### Post urls
+1. Clone the repository:
 
-curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MjI3Nzc1NTcsInVzZXIiOiJhZG1pbkBleGFtcGxlLmNvbSJ9.3lhCE9AHyp0uf-lZasZLTqsWnDMqPBnDH42vs0LHh60" -d '{
-"urls": [
-"http://example1.com",
-"http://example2.com",
-"http://example3.com"
-]
-}' http://localhost:8080/api/urls
+   ```sh
+   git clone https://github.com/yourusername/urls-processor.git
+   cd urls-processor
+   ```
 
-### Test protected ep
+2. Set up environment variables. Create a `.env` file in the root directory of the project and add the following environment variables:
 
-curl -H "Authorization: Bearer YOUR_JWT_TOKEN" http://localhost:8080/admin/test-protected
+   ```env
+   JWT_SECRET=your_jwt_secret
+   ALLOWED_ORIGIN=http://your-frontend-domain.com
+   PORT=8080
+   WORKER_COUNT=5
+   ```
 
-### Test ep
+3. Load the environment variables and dependencies:
+   ```sh
+   go mod tidy
+   ```
 
-curl http://localhost:8080/test
+## Running the Application
 
-### Get URLs
+1. Build and run the Go server:
 
-curl -X GET -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MjI3Nzc1NTcsInVzZXIiOiJhZG1pbkBleGFtcGxlLmNvbSJ9.3lhCE9AHyp0uf-lZasZLTqsWnDMqPBnDH42vs0LHh61" http://localhost:8080/api/urls
+   ```sh
+   go run main.go
+   ```
 
-### Get URL
+2. The application will start on the port specified in the `.env` file (default is 8080). You can access it via `http://localhost:8080`.
 
-curl -X GET "http://localhost:8080/api/url?id=1" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MjI3Nzc1NTcsInVzZXIiOiJhZG1pbkBleGFtcGxlLmNvbSJ9.3lhCE9AHyp0uf-lZasZLTqsWnDMqPBnDH42vs0LHh61"
+## API Endpoints
 
+### Public Endpoints
 
-### GetStatus
+- `GET /`: Home endpoint to check the status of the application.
+- `POST /authenticate`: Authenticate the user and receive a JWT token.
 
-curl -X GET -H "Authorization: Bearer YOUR_JWT_TOKEN" "http://localhost:8080/api/checkStatus?id=TASK_ID"
+### Protected Endpoints (require JWT token)
 
-curl -X GET -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MjI3Nzc1NTcsInVzZXIiOiJhZG1pbkBleGFtcGxlLmNvbSJ9.3lhCE9AHyp0uf-lZasZLTqsWnDMqPBnDH42vs0LHh61" "http://localhost:8080/api/checkStatus?id=1"
+- `GET /api/urls`: Get all processed URLs.
+- `POST /api/urls`: Add URLs for processing.
+- `GET /api/url?id={id}`: Get information about a specific URL.
+- `POST /api/start`: Start the computation for a specific URL.
+- `POST /api/stop`: Stop the computation for a specific URL.
 
-### StartComputation
+## Example .env File
 
-curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MjI3Nzc1NTcsInVzZXIiOiJhZG1pbkBleGFtcGxlLmNvbSJ9.3lhCE9AHyp0uf-lZasZLTqsWnDMqPBnDH42vs0LHh61" -d '{
-"id": 1
-}' http://localhost:8080/api/start
+Here is an example of what your `.env` file might look like:
 
-### Stop Computation
-
-curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MjI3Nzc1NTcsInVzZXIiOiJhZG1pbkBleGFtcGxlLmNvbSJ9.3lhCE9AHyp0uf-lZasZLTqsWnDMqPBnDH42vs0LHh61" -d '{
-"task_id": 1
-}' http://localhost:8080/api/stopComputation
+```env
+JWT_SECRET=mysecretkey
+ALLOWED_ORIGIN=http://localhost:3000
+PORT=8080
+WORKER_COUNT=5
+```
