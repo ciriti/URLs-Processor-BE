@@ -173,8 +173,6 @@ func (m *MockURLManager) GetURLState(id int) URLState {
 type MockTaskQueue struct {
 	AddTaskFunc  func(urlInfo *URLInfo) (*Task, error)
 	StopTaskFunc func(id int) (*Task, error)
-	GetTaskFunc  func(id int) (*Task, error)
-	ContainsFunc func(id int) bool
 }
 
 func (m *MockTaskQueue) AddTask(urlInfo *URLInfo) (*Task, error) {
@@ -191,30 +189,10 @@ func (m *MockTaskQueue) StopTask(id int) (*Task, error) {
 	return nil, errors.New("StopTask function not implemented")
 }
 
-func (m *MockTaskQueue) GetTask(id int) (*Task, error) {
-	if m.GetTaskFunc != nil {
-		return m.GetTaskFunc(id)
-	}
-	return nil, errors.New("GetTask function not implemented")
-}
-
-func (m *MockTaskQueue) Contains(id int) bool {
-	if m.ContainsFunc != nil {
-		return m.ContainsFunc(id)
-	}
-	return false
-}
-
 func TestStartComputation(t *testing.T) {
 	mockTaskQueue := &MockTaskQueue{
 		AddTaskFunc: func(urlInfo *URLInfo) (*Task, error) {
 			return &Task{ID: urlInfo.ID, URL: urlInfo.URL}, nil
-		},
-		GetTaskFunc: func(id int) (*Task, error) {
-			if id == 1 {
-				return &Task{ID: 1, URL: "http://example.com"}, nil
-			}
-			return nil, errors.New("task not found")
 		},
 	}
 

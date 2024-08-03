@@ -24,17 +24,8 @@ type application struct {
 }
 
 func main() {
-	env := os.Getenv("APP_ENV")
-	if env == "" {
-		env = "development"
-	}
-
-	_ = godotenv.Load(".env." + env + ".local")
-	if env != "test" {
-		_ = godotenv.Load(".env.local")
-	}
-	_ = godotenv.Load(".env." + env)
-	_ = godotenv.Load()
+	// Load environment variables based on the current environment
+	loadEnvFiles()
 
 	jwtSecret := getEnv("JWT_SECRET", "default-secret")
 	if jwtSecret == "" {
@@ -52,19 +43,17 @@ func main() {
 		logrus.Fatalf("Invalid port number: %v", portStr)
 	}
 
+	workersStrt := getEnv("WORKER_COUNT", "-1")
+	workers, err := strconv.Atoi(workersStrt)
+	if err != nil || workers < 1 || workers > 100 {
+		logrus.Fatalf("Invalid worker count: %v", workers)
+	}
+
 	authenticator := auth.NewJWTAuthenticator(jwtSecret)
 
 	logger := logrus.New()
 	logger.SetFormatter(&logrus.JSONFormatter{})
-
 	urlManager := NewURLManager()
-
-	workersStrt := getEnv("WORKER_COUNT", "-1")
-	workers, err := strconv.Atoi(workersStrt)
-	logger.Infof("Workers count: %d", workers)
-	if err != nil || workers < 1 || workers > 100 {
-		logrus.Fatalf("Invalid worker count: %v", workers)
-	}
 	taskQueue := NewTaskQueue(workers, urlManager, logger)
 
 	app := &application{
@@ -75,6 +64,7 @@ func main() {
 	}
 
 	logger.Println("Starting application on port", port)
+	logger.Infof("Workers count: %d", workers)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", port),
@@ -90,6 +80,20 @@ func main() {
 
 	gracefulShutdown(srv, logger)
 
+}
+
+func loadEnvFiles() {
+	env := os.Getenv("APP_ENV")
+	if env == "" {
+		env = "development"
+	}
+
+	_ = godotenv.Load(".env." + env + ".local")
+	if env != "test" {
+		_ = godotenv.Load(".env.local")
+	}
+	_ = godotenv.Load(".env." + env)
+	_ = godotenv.Load()
 }
 
 // all in-flight requests are completed before the server stops

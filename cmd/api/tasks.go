@@ -20,8 +20,6 @@ type Task struct {
 type TaskQueueInterface interface {
 	AddTask(urlInfo *URLInfo) (*Task, error)
 	StopTask(id int) (*Task, error)
-	GetTask(id int) (*Task, error)
-	Contains(id int) bool
 }
 
 type TaskQueue struct {
@@ -39,7 +37,7 @@ func NewTaskQueue(workerCount int, urlManager *URLManager, logger *logrus.Logger
 		workerCount: workerCount,
 		urlManager:  urlManager,
 		logger:      logger,
-		sem:         make(chan struct{}, workerCount), // Initialize semaphore
+		sem:         make(chan struct{}, workerCount),
 	}
 
 	for i := 0; i < workerCount; i++ {
@@ -51,7 +49,7 @@ func NewTaskQueue(workerCount int, urlManager *URLManager, logger *logrus.Logger
 
 func (tq *TaskQueue) worker() {
 	for {
-		tq.sem <- struct{}{} // Acquire a semaphore
+		tq.sem <- struct{}{}
 		tq.mu.Lock()
 		var taskToProcess *Task
 		for _, task := range tq.tasks {
@@ -66,10 +64,10 @@ func (tq *TaskQueue) worker() {
 		if taskToProcess != nil {
 			go func(task *Task) {
 				tq.processTask(task)
-				<-tq.sem // Release the semaphore
+				<-tq.sem
 			}(taskToProcess)
 		} else {
-			<-tq.sem // Release the semaphore if no task to process
+			<-tq.sem
 			time.Sleep(1 * time.Second)
 		}
 	}
@@ -98,7 +96,7 @@ func (tq *TaskQueue) processTask(task *Task) {
 		}
 	}
 
-	task.Done = true // Ensure Done is set after handling stop condition
+	task.Done = true
 }
 
 func (tq *TaskQueue) AddTask(urlInfo *URLInfo) (*Task, error) {
@@ -107,9 +105,9 @@ func (tq *TaskQueue) AddTask(urlInfo *URLInfo) (*Task, error) {
 
 	task, exists := tq.tasks[urlInfo.ID]
 	if exists {
-		// Check if the task is stopped or completed and reset it
+
 		state := tq.urlManager.GetURLState(urlInfo.ID)
-		tq.logger.Infof("====================================== 1   GetURLState: %s", state)
+		tq.logger.Infof(" GetURLState: %s", state)
 		if state == Stopped || state == Completed {
 			task.Stop = false
 			task.Done = false
@@ -119,7 +117,7 @@ func (tq *TaskQueue) AddTask(urlInfo *URLInfo) (*Task, error) {
 			tq.logger.Infof("Resetting task ID: %d", urlInfo.ID)
 		}
 	} else {
-		// Create a new task if it doesn't exist
+
 		task = &Task{
 			ID:   urlInfo.ID,
 			URL:  urlInfo.URL,
@@ -136,36 +134,19 @@ func (tq *TaskQueue) StopTask(id int) (*Task, error) {
 	tq.mu.Lock()
 	defer tq.mu.Unlock()
 	if task, exists := tq.tasks[id]; exists {
-		tq.logger.Infof("====================================== 1   task.Done: %v - task.Stop: %v", task.Done, task.Stop)
+		tq.logger.Infof("StopTask - task.Done: %v - task.Stop: %v", task.Done, task.Stop)
 		if !task.Stop {
 			task.Stop = true
 			tq.urlManager.UpdateURLState(id, Stopped)
-			tq.logger.Infof("====================================== 2   Task ID: %d stop signal sent", task.ID)
+			tq.logger.Infof("StopTask - Task ID: %d stop signal sent", task.ID)
 		} else {
-			tq.logger.Infof("====================================== 3   Task ID: %d already stopped or completed", task.ID)
+			tq.logger.Infof("StopTask - Task ID: %d already stopped or completed", task.ID)
 		}
 		return task, nil
 	} else {
 		tq.logger.Warnf("Task ID: %d not found", id)
 		return nil, errors.New("task not found")
 	}
-}
-
-func (tq *TaskQueue) GetTask(id int) (*Task, error) {
-	tq.mu.Lock()
-	defer tq.mu.Unlock()
-	if task, exists := tq.tasks[id]; exists {
-		return task, nil
-	}
-	return nil, errors.New("task not found")
-}
-
-func (tq *TaskQueue) Contains(id int) bool {
-	tq.mu.Lock()
-	defer tq.mu.Unlock()
-
-	_, exists := tq.tasks[id]
-	return exists
 }
 
 func processURL(url string, task *Task, logger *logrus.Logger) (*DataInfo, error) {
