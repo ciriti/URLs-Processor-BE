@@ -23,21 +23,23 @@ type TaskQueueInterface interface {
 }
 
 type TaskQueue struct {
-	tasks       map[int]*Task
-	workerCount int
-	urlManager  URLManagerInterface
-	logger      *logrus.Logger
-	mu          sync.Mutex
-	sem         chan struct{}
+	tasks        map[int]*Task
+	workerCount  int
+	urlManager   URLManagerInterface
+	pageAnalyzer PageAnalyzerInterface
+	logger       *logrus.Logger
+	mu           sync.Mutex
+	sem          chan struct{}
 }
 
-func NewTaskQueue(workerCount int, urlManager URLManagerInterface, logger *logrus.Logger) *TaskQueue {
+func NewTaskQueue(workerCount int, urlManager URLManagerInterface, pageAnalyzer PageAnalyzerInterface, logger *logrus.Logger) *TaskQueue {
 	tq := &TaskQueue{
-		tasks:       make(map[int]*Task),
-		workerCount: workerCount,
-		urlManager:  urlManager,
-		logger:      logger,
-		sem:         make(chan struct{}, workerCount),
+		tasks:        make(map[int]*Task),
+		workerCount:  workerCount,
+		urlManager:   urlManager,
+		pageAnalyzer: pageAnalyzer,
+		logger:       logger,
+		sem:          make(chan struct{}, workerCount),
 	}
 
 	for i := 0; i < workerCount; i++ {
@@ -77,7 +79,7 @@ func (tq *TaskQueue) processTask(task *Task) {
 	tq.logger.Infof("Processing task ID: %d, URL: %s", task.ID, task.URL)
 	tq.urlManager.UpdateURLState(task.ID, Processing)
 
-	data, err := processURL(task.URL, task, tq.logger)
+	data, err := tq.pageAnalyzer.AnalyzePage(task.URL, task)
 
 	tq.mu.Lock()
 	defer tq.mu.Unlock()
@@ -147,29 +149,6 @@ func (tq *TaskQueue) StopTask(id int) (*Task, error) {
 		tq.logger.Warnf("Task ID: %d not found", id)
 		return nil, errors.New("task not found")
 	}
-}
-
-func processURL(url string, task *Task, logger *logrus.Logger) (*DataInfo, error) {
-	for i := 0; i < 10; i++ {
-		time.Sleep(1 * time.Second)
-
-		if task.Stop {
-			logger.Infof(" processURL - Task ID: %d processing stopped", task.ID)
-			return nil, errors.New("task stopped")
-		}
-	}
-
-	data := &DataInfo{
-		HTMLVersion:       "HTML5",
-		PageTitle:         "Example Page",
-		HeadingTagsCount:  map[string]int{"h1": 1, "h2": 2, "h3": 3},
-		InternalLinks:     5,
-		ExternalLinks:     3,
-		InaccessibleLinks: 1,
-		HasLoginForm:      true,
-	}
-
-	return data, nil
 }
 
 func (tq *TaskQueue) GetTask(id int) (*Task, error) {

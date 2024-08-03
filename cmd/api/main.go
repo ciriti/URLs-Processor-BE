@@ -54,7 +54,9 @@ func main() {
 	logger := logrus.New()
 	logger.SetFormatter(&logrus.JSONFormatter{})
 	urlManager := NewURLManager()
-	taskQueue := NewTaskQueue(workers, urlManager, logger)
+	client := &http.Client{Timeout: 10 * time.Second}
+	pageAnalyzer := NewPageAnalyzer(client, logger)
+	taskQueue := NewTaskQueue(workers, urlManager, pageAnalyzer,logger)
 
 	app := &application{
 		authenticator: authenticator,
