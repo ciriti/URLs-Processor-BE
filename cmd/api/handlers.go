@@ -221,6 +221,7 @@ func (app *application) startComputation(w http.ResponseWriter, r *http.Request)
 	}
 
 	currentState := app.urlManager.GetURLState(payload.ID)
+	// If the status of the task is already Processing or Pending, don't start it again
 	if currentState == Processing || currentState == Pending {
 		response := map[string]interface{}{
 			"id":      urlInfo.ID,
@@ -237,7 +238,7 @@ func (app *application) startComputation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Reset task if it is in Stopped or Completed state
+	// If the status of the task is already Completed, reset the task state
 	if currentState == Completed {
 		app.logger.Infof("Resetting task ID: %d to Pending state", payload.ID)
 		app.urlManager.UpdateURLState(payload.ID, Pending)
