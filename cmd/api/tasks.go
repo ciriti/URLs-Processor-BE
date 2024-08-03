@@ -13,7 +13,6 @@ type Task struct {
 	URL    string
 	Result *DataInfo
 	Err    error
-	State  URLState
 	Done   bool
 	Stop   bool
 }
@@ -56,8 +55,8 @@ func (tq *TaskQueue) worker() {
 		tq.mu.Lock()
 		var taskToProcess *Task
 		for _, task := range tq.tasks {
-			if task.State == Pending {
-				task.State = Processing
+			if tq.urlManager.GetURLState(task.ID) == Pending {
+				tq.urlManager.UpdateURLState(task.ID, Processing)
 				taskToProcess = task
 				break
 			}
@@ -82,62 +81,74 @@ func (tq *TaskQueue) processTask(task *Task) {
 
 	data, err := processURL(task.URL, task, tq.logger)
 
+	tq.mu.Lock()
+	defer tq.mu.Unlock()
+
 	if task.Stop {
-		tq.logger.Infof("Task ID: %d stopped", task.ID)
-		task.State = Stopped
+		tq.logger.Infof("Task ID: %d processing stopped", task.ID)
 		tq.urlManager.UpdateURLState(task.ID, Stopped)
 	} else {
 		task.Result = data
 		task.Err = err
 
 		if err == nil {
-			task.State = Completed
 			tq.urlManager.UpdateProcessedData(task.ID, data)
 		} else {
-			task.State = Failed
 			tq.urlManager.UpdateURLState(task.ID, Failed)
 		}
 	}
 
-	task.Done = true
-}
-
-func (tq *TaskQueue) StopTask(id int) (*Task, error) {
-	tq.mu.Lock()
-	defer tq.mu.Unlock()
-	if task, exists := tq.tasks[id]; exists {
-		if !task.Stop && !task.Done {
-			task.Stop = true
-			task.State = Stopped
-			tq.logger.Infof("Task ID: %d stop signal sent", task.ID)
-		} else {
-			tq.logger.Warnf("Task ID: %d already stopped or completed", task.ID)
-		}
-		return task, nil
-	} else {
-		tq.logger.Warnf("Task ID: %d not found", id)
-		return nil, errors.New("task not found")
-	}
+	task.Done = true // Ensure Done is set after handling stop condition
 }
 
 func (tq *TaskQueue) AddTask(urlInfo *URLInfo) (*Task, error) {
 	tq.mu.Lock()
 	defer tq.mu.Unlock()
 
-	if task, exists := tq.tasks[urlInfo.ID]; exists && task.State != Completed && task.State != Stopped {
-		return task, errors.New("task already in progress")
+	task, exists := tq.tasks[urlInfo.ID]
+	if exists {
+		// Check if the task is stopped or completed and reset it
+		state := tq.urlManager.GetURLState(urlInfo.ID)
+		tq.logger.Infof("====================================== 1   GetURLState: %s", state)
+		if state == Stopped || state == Completed {
+			task.Stop = false
+			task.Done = false
+			task.Result = nil
+			task.Err = nil
+			tq.urlManager.UpdateURLState(urlInfo.ID, Pending)
+			tq.logger.Infof("Resetting task ID: %d", urlInfo.ID)
+		}
+	} else {
+		// Create a new task if it doesn't exist
+		task = &Task{
+			ID:   urlInfo.ID,
+			URL:  urlInfo.URL,
+			Done: false,
+			Stop: false,
+		}
+		tq.tasks[task.ID] = task
 	}
 
-	task := &Task{
-		ID:    urlInfo.ID,
-		URL:   urlInfo.URL,
-		State: Pending,
-		Done:  false,
-		Stop:  false,
-	}
-
-	tq.tasks[task.ID] = task
 	return task, nil
+}
+
+func (tq *TaskQueue) StopTask(id int) (*Task, error) {
+	tq.mu.Lock()
+	defer tq.mu.Unlock()
+	if task, exists := tq.tasks[id]; exists {
+		tq.logger.Infof("====================================== 1   task.Done: %v - task.Stop: %v", task.Done, task.Stop)
+		if !task.Stop {
+			task.Stop = true
+			tq.urlManager.UpdateURLState(id, Stopped)
+			tq.logger.Infof("====================================== 2   Task ID: %d stop signal sent", task.ID)
+		} else {
+			tq.logger.Infof("====================================== 3   Task ID: %d already stopped or completed", task.ID)
+		}
+		return task, nil
+	} else {
+		tq.logger.Warnf("Task ID: %d not found", id)
+		return nil, errors.New("task not found")
+	}
 }
 
 func (tq *TaskQueue) GetTask(id int) (*Task, error) {
@@ -162,7 +173,7 @@ func processURL(url string, task *Task, logger *logrus.Logger) (*DataInfo, error
 		time.Sleep(1 * time.Second)
 
 		if task.Stop {
-			logger.Infof("Task ID: %d processing stopped", task.ID)
+			logger.Infof(" processURL - Task ID: %d processing stopped", task.ID)
 			return nil, errors.New("task stopped")
 		}
 	}

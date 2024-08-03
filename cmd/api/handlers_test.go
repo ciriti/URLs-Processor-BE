@@ -120,6 +120,7 @@ type MockURLManager struct {
 	GetURLInfoFunc          func(id int) *URLInfo
 	GetAllURLsFunc          func() []*URLInfo
 	NextIDFunc              func() int
+	GetURLStateFunc         func(id int) URLState
 }
 
 func (m *MockURLManager) AddURL(url string) *URLInfo {
@@ -162,6 +163,13 @@ func (m *MockURLManager) nextID() int {
 	return 0
 }
 
+func (m *MockURLManager) GetURLState(id int) URLState {
+	if m.GetURLStateFunc != nil {
+		return m.GetURLStateFunc(id)
+	}
+	return ""
+}
+
 type MockTaskQueue struct {
 	AddTaskFunc  func(urlInfo *URLInfo) (*Task, error)
 	StopTaskFunc func(id int) (*Task, error)
@@ -200,22 +208,28 @@ func (m *MockTaskQueue) Contains(id int) bool {
 func TestStartComputation(t *testing.T) {
 	mockTaskQueue := &MockTaskQueue{
 		AddTaskFunc: func(urlInfo *URLInfo) (*Task, error) {
-			return &Task{ID: urlInfo.ID, URL: urlInfo.URL, State: Pending}, nil
+			return &Task{ID: urlInfo.ID, URL: urlInfo.URL}, nil
 		},
 		GetTaskFunc: func(id int) (*Task, error) {
+			if id == 1 {
+				return &Task{ID: 1, URL: "http://example.com"}, nil
+			}
 			return nil, errors.New("task not found")
 		},
 	}
 
 	mockURLManager := &MockURLManager{
 		GetURLInfoFunc: func(id int) *URLInfo {
-			return &URLInfo{ID: id, URL: "http://example.com", State: Pending}
+			return &URLInfo{ID: id, URL: "http://example.com", State: Stopped}
 		},
-		AddURLFunc: func(url string) *URLInfo {
-			return &URLInfo{ID: 1, URL: url, State: Pending}
+		GetURLStateFunc: func(id int) URLState {
+			if id == 1 {
+				return Stopped
+			}
+			return Pending
 		},
-		NextIDFunc: func() int {
-			return 1
+		UpdateURLStateFunc: func(id int, state URLState) {
+			// Mock state update
 		},
 	}
 

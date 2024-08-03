@@ -41,6 +41,7 @@ type URLManagerInterface interface {
 	GetURLInfo(id int) *URLInfo
 	GetAllURLs() []*URLInfo
 	nextID() int
+	GetURLState(id int) URLState
 }
 
 type URLManager struct {
@@ -112,4 +113,13 @@ func (manager *URLManager) GetAllURLs() []*URLInfo {
 		allURLs = append(allURLs, urlInfo)
 	}
 	return allURLs
+}
+
+func (manager *URLManager) GetURLState(id int) URLState {
+	manager.mu.RLock()
+	defer manager.mu.RUnlock()
+	if urlInfo, exists := manager.urls[id]; exists {
+		return urlInfo.State
+	}
+	return ""
 }
