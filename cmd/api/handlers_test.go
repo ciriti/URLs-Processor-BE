@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -118,49 +119,82 @@ type MockURLManager struct {
 	UpdateProcessedDataFunc func(id int, data *DataInfo)
 	GetURLInfoFunc          func(id int) *URLInfo
 	GetAllURLsFunc          func() []*URLInfo
-	nextIDFunc              func() int
+	NextIDFunc              func() int
 }
 
 func (m *MockURLManager) AddURL(url string) *URLInfo {
-	return m.AddURLFunc(url)
+	if m.AddURLFunc != nil {
+		return m.AddURLFunc(url)
+	}
+	return nil
 }
 
 func (m *MockURLManager) UpdateURLState(id int, state URLState) {
-	m.UpdateURLStateFunc(id, state)
+	if m.UpdateURLStateFunc != nil {
+		m.UpdateURLStateFunc(id, state)
+	}
 }
 
 func (m *MockURLManager) UpdateProcessedData(id int, data *DataInfo) {
-	m.UpdateProcessedDataFunc(id, data)
+	if m.UpdateProcessedDataFunc != nil {
+		m.UpdateProcessedDataFunc(id, data)
+	}
 }
 
 func (m *MockURLManager) GetURLInfo(id int) *URLInfo {
-	return m.GetURLInfoFunc(id)
+	if m.GetURLInfoFunc != nil {
+		return m.GetURLInfoFunc(id)
+	}
+	return nil
 }
 
 func (m *MockURLManager) GetAllURLs() []*URLInfo {
-	return m.GetAllURLsFunc()
+	if m.GetAllURLsFunc != nil {
+		return m.GetAllURLsFunc()
+	}
+	return nil
+}
+
+func (m *MockURLManager) nextID() int {
+	if m.NextIDFunc != nil {
+		return m.NextIDFunc()
+	}
+	return 0
 }
 
 type MockTaskQueue struct {
 	AddTaskFunc  func(urlInfo *URLInfo) (*Task, error)
 	StopTaskFunc func(id int) (*Task, error)
 	GetTaskFunc  func(id int) (*Task, error)
+	ContainsFunc func(id int) bool
 }
 
 func (m *MockTaskQueue) AddTask(urlInfo *URLInfo) (*Task, error) {
-	return m.AddTaskFunc(urlInfo)
+	if m.AddTaskFunc != nil {
+		return m.AddTaskFunc(urlInfo)
+	}
+	return nil, errors.New("AddTask function not implemented")
 }
 
 func (m *MockTaskQueue) StopTask(id int) (*Task, error) {
-	return m.StopTaskFunc(id)
-}
-
-func (m *MockURLManager) nextID() int {
-	return m.nextIDFunc()
+	if m.StopTaskFunc != nil {
+		return m.StopTaskFunc(id)
+	}
+	return nil, errors.New("StopTask function not implemented")
 }
 
 func (m *MockTaskQueue) GetTask(id int) (*Task, error) {
-	return m.GetTaskFunc(id)
+	if m.GetTaskFunc != nil {
+		return m.GetTaskFunc(id)
+	}
+	return nil, errors.New("GetTask function not implemented")
+}
+
+func (m *MockTaskQueue) Contains(id int) bool {
+	if m.ContainsFunc != nil {
+		return m.ContainsFunc(id)
+	}
+	return false
 }
 
 func TestStartComputation(t *testing.T) {
@@ -168,11 +202,20 @@ func TestStartComputation(t *testing.T) {
 		AddTaskFunc: func(urlInfo *URLInfo) (*Task, error) {
 			return &Task{ID: urlInfo.ID, URL: urlInfo.URL, State: Pending}, nil
 		},
+		GetTaskFunc: func(id int) (*Task, error) {
+			return nil, errors.New("task not found")
+		},
 	}
 
 	mockURLManager := &MockURLManager{
 		GetURLInfoFunc: func(id int) *URLInfo {
 			return &URLInfo{ID: id, URL: "http://example.com", State: Pending}
+		},
+		AddURLFunc: func(url string) *URLInfo {
+			return &URLInfo{ID: 1, URL: url, State: Pending}
+		},
+		NextIDFunc: func() int {
+			return 1
 		},
 	}
 

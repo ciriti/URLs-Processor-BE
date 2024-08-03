@@ -26,6 +26,11 @@ curl http://localhost:8080/test
 
 curl -X GET -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MjI3Nzc1NTcsInVzZXIiOiJhZG1pbkBleGFtcGxlLmNvbSJ9.3lhCE9AHyp0uf-lZasZLTqsWnDMqPBnDH42vs0LHh61" http://localhost:8080/api/urls
 
+### Get URL
+
+curl -X GET "http://localhost:8080/api/url?id=1" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MjI3Nzc1NTcsInVzZXIiOiJhZG1pbkBleGFtcGxlLmNvbSJ9.3lhCE9AHyp0uf-lZasZLTqsWnDMqPBnDH42vs0LHh61"
+
+
 ### GetStatus
 
 curl -X GET -H "Authorization: Bearer YOUR_JWT_TOKEN" "http://localhost:8080/api/checkStatus?id=TASK_ID"

@@ -59,7 +59,13 @@ func main() {
 
 	urlManager := NewURLManager()
 
-	taskQueue := NewTaskQueue(2, urlManager, logger)
+	workersStrt := getEnv("WORKER_COUNT", "-1")
+	workers, err := strconv.Atoi(workersStrt)
+	logger.Infof("Workers count: %d", workers)
+	if err != nil || workers < 1 || workers > 100 {
+		logrus.Fatalf("Invalid worker count: %v", workers)
+	}
+	taskQueue := NewTaskQueue(workers, urlManager, logger)
 
 	app := &application{
 		authenticator: authenticator,

@@ -22,6 +22,7 @@ type TaskQueueInterface interface {
 	AddTask(urlInfo *URLInfo) (*Task, error)
 	StopTask(id int) (*Task, error)
 	GetTask(id int) (*Task, error)
+	Contains(id int) bool
 }
 
 type TaskQueue struct {
@@ -148,8 +149,16 @@ func (tq *TaskQueue) GetTask(id int) (*Task, error) {
 	return nil, errors.New("task not found")
 }
 
+func (tq *TaskQueue) Contains(id int) bool {
+	tq.mu.Lock()
+	defer tq.mu.Unlock()
+
+	_, exists := tq.tasks[id]
+	return exists
+}
+
 func processURL(url string, task *Task, logger *logrus.Logger) (*DataInfo, error) {
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 10; i++ {
 		time.Sleep(1 * time.Second)
 
 		if task.Stop {
