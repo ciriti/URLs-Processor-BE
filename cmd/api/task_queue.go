@@ -25,13 +25,13 @@ type TaskQueueInterface interface {
 type TaskQueue struct {
 	tasks       map[int]*Task
 	workerCount int
-	urlManager  *URLManager
+	urlManager  URLManagerInterface
 	logger      *logrus.Logger
 	mu          sync.Mutex
 	sem         chan struct{}
 }
 
-func NewTaskQueue(workerCount int, urlManager *URLManager, logger *logrus.Logger) *TaskQueue {
+func NewTaskQueue(workerCount int, urlManager URLManagerInterface, logger *logrus.Logger) *TaskQueue {
 	tq := &TaskQueue{
 		tasks:       make(map[int]*Task),
 		workerCount: workerCount,
@@ -170,4 +170,13 @@ func processURL(url string, task *Task, logger *logrus.Logger) (*DataInfo, error
 	}
 
 	return data, nil
+}
+
+func (tq *TaskQueue) GetTask(id int) (*Task, error) {
+	tq.mu.Lock()
+	defer tq.mu.Unlock()
+	if task, exists := tq.tasks[id]; exists {
+		return task, nil
+	}
+	return nil, errors.New("task not found")
 }

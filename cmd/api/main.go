@@ -24,7 +24,7 @@ type application struct {
 }
 
 func main() {
-	// Load environment variables based on the current environment
+	// load environment vars
 	loadEnvFiles()
 
 	jwtSecret := getEnv("JWT_SECRET", "default-secret")

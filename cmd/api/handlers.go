@@ -104,20 +104,6 @@ func (app *application) logout(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (app *application) adminEndpoint(w http.ResponseWriter, r *http.Request) {
-	_, err := w.Write([]byte("This is a protected endpoint"))
-	if err != nil {
-		app.logger.WithError(err).Error("error writing JSON response")
-	}
-}
-
-func (app *application) regularEndpoint(w http.ResponseWriter, r *http.Request) {
-	_, err := w.Write([]byte("This is a regular endpoint"))
-	if err != nil {
-		app.logger.WithError(err).Error("error writing JSON response")
-	}
-}
-
 func (app *application) addURLs(w http.ResponseWriter, r *http.Request) {
 	var payload struct {
 		URLs []string `json:"urls"`
@@ -205,45 +191,6 @@ func (app *application) getAllURLs(w http.ResponseWriter, r *http.Request) {
 		err = app.errorJSON(w, err, http.StatusInternalServerError)
 		if err != nil {
 			app.logger.WithError(err).Error("error writing JSON response")
-		}
-	}
-}
-
-func (app *application) checkStatus(w http.ResponseWriter, r *http.Request) {
-	idStr := r.URL.Query().Get("id")
-	if idStr == "" {
-		err := app.errorJSON(w, errors.New("missing url id parameter"), http.StatusBadRequest)
-		if err != nil {
-			app.logger.Println("error writing JSON response:", err)
-		}
-		return
-	}
-
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		err := app.errorJSON(w, errors.New("invalid url id parameter"), http.StatusBadRequest)
-		if err != nil {
-			app.logger.Println("error writing JSON response:", err)
-		}
-		return
-	}
-
-	urlInfo := app.urlManager.GetURLInfo(id)
-	if urlInfo == nil {
-		err := app.errorJSON(w, errors.New("URL not found"), http.StatusNotFound)
-		if err != nil {
-			app.logger.Println("error writing JSON response:", err)
-		}
-		return
-	}
-
-	app.logger.Infof("Task ID: %d, Status: %s", urlInfo.ID, urlInfo.State)
-
-	if err := app.writeJSON(w, http.StatusOK, urlInfo); err != nil {
-		app.logger.Println("error writing JSON response:", err)
-		err = app.errorJSON(w, err, http.StatusInternalServerError)
-		if err != nil {
-			app.logger.Println("error writing JSON response:", err)
 		}
 	}
 }

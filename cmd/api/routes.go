@@ -15,7 +15,6 @@ func (app *application) routes() http.Handler {
 	mux.Use(app.enableCORS)
 
 	mux.Get("/", app.Home)
-	mux.Get("/test", app.regularEndpoint)
 
 	mux.Post("/authenticate", app.authenticate)
 	mux.Get("/logout", app.logout)
@@ -29,9 +28,6 @@ func (app *application) routes() http.Handler {
 		mux.Get("/url", app.getURL)
 		mux.Post("/start", app.startComputation)
 		mux.Post("/stop", app.stopComputation)
-		mux.Get("/checkStatus", app.checkStatus)
-
-		mux.Get("/test-protected", app.adminEndpoint)
 	})
 
 	return (mux)
