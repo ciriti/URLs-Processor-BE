@@ -1,6 +1,7 @@
 package main
 
 import (
+	"backend/internal/services"
 	"bytes"
 	"encoding/json"
 	"net/http"
@@ -113,23 +114,23 @@ func TestAuthenticateInvalidCredentials(t *testing.T) {
 }
 
 func TestStartComputation(t *testing.T) {
-	mockTaskQueue := &MockTaskQueue{
-		AddTaskFunc: func(urlInfo *URLInfo) (*Task, error) {
-			return &Task{ID: urlInfo.ID, URL: urlInfo.URL}, nil
+	mockTaskQueue := &services.MockTaskQueue{
+		AddTaskFunc: func(urlInfo *services.URLInfo) (*services.Task, error) {
+			return &services.Task{ID: urlInfo.ID, URL: urlInfo.URL}, nil
 		},
 	}
 
-	mockURLManager := &MockURLManager{
-		GetURLInfoFunc: func(id int) *URLInfo {
-			return &URLInfo{ID: id, URL: "http://example.com", State: Stopped}
+	mockURLManager := &services.MockURLManager{
+		GetURLInfoFunc: func(id int) *services.URLInfo {
+			return &services.URLInfo{ID: id, URL: "http://example.com", State: services.Stopped}
 		},
-		GetURLStateFunc: func(id int) URLState {
+		GetURLStateFunc: func(id int) services.URLState {
 			if id == 1 {
-				return Stopped
+				return services.Stopped
 			}
-			return Pending
+			return services.Pending
 		},
-		UpdateURLStateFunc: func(id int, state URLState) {
+		UpdateURLStateFunc: func(id int, state services.URLState) {
 			// Mock state update
 		},
 	}
@@ -170,8 +171,8 @@ func TestStartComputation(t *testing.T) {
 }
 
 func TestAddURLsInvalidJSON(t *testing.T) {
-	mockTaskQueue := &MockTaskQueue{}
-	mockURLManager := &MockURLManager{}
+	mockTaskQueue := &services.MockTaskQueue{}
+	mockURLManager := &services.MockURLManager{}
 
 	logger := logrus.New()
 	app := &application{
@@ -202,7 +203,7 @@ func TestAddURLsInvalidJSON(t *testing.T) {
 }
 
 func TestGetURLMissingID(t *testing.T) {
-	mockURLManager := &MockURLManager{}
+	mockURLManager := &services.MockURLManager{}
 
 	logger := logrus.New()
 	app := &application{

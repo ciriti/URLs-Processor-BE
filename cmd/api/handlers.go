@@ -1,6 +1,7 @@
 package main
 
 import (
+	"backend/internal/services"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -222,7 +223,7 @@ func (app *application) startComputation(w http.ResponseWriter, r *http.Request)
 
 	currentState := app.urlManager.GetURLState(payload.ID)
 	// If the status of the task is already Processing or Pending, don't start it again
-	if currentState == Processing || currentState == Pending {
+	if currentState == services.Processing || currentState == services.Pending {
 		response := map[string]interface{}{
 			"id":      urlInfo.ID,
 			"state":   currentState,
@@ -239,9 +240,9 @@ func (app *application) startComputation(w http.ResponseWriter, r *http.Request)
 	}
 
 	// If the status of the task is already Completed, reset the task state
-	if currentState == Completed {
+	if currentState == services.Completed {
 		app.logger.Infof("Resetting task ID: %d to Pending state", payload.ID)
-		app.urlManager.UpdateURLState(payload.ID, Pending)
+		app.urlManager.UpdateURLState(payload.ID, services.Pending)
 	}
 
 	// Enqueue the task and return a response immediately
@@ -252,7 +253,7 @@ func (app *application) startComputation(w http.ResponseWriter, r *http.Request)
 		}
 	}()
 
-	if err := app.writeJSON(w, http.StatusOK, map[string]interface{}{"id": payload.ID, "state": Pending}); err != nil {
+	if err := app.writeJSON(w, http.StatusOK, map[string]interface{}{"id": payload.ID, "state": services.Pending}); err != nil {
 		app.logger.WithError(err).Error("error writing JSON response")
 		err = app.errorJSON(w, err, http.StatusInternalServerError)
 		if err != nil {
@@ -287,7 +288,7 @@ func (app *application) stopComputation(w http.ResponseWriter, r *http.Request) 
 	}
 
 	currentState := app.urlManager.GetURLState(payload.ID)
-	if currentState == Completed || currentState == Stopped {
+	if currentState == services.Completed || currentState == services.Stopped {
 		response := map[string]interface{}{
 			"id":      urlInfo.ID,
 			"state":   currentState,
@@ -316,7 +317,7 @@ func (app *application) stopComputation(w http.ResponseWriter, r *http.Request) 
 
 	response := map[string]interface{}{
 		"id":      task.ID,
-		"state":   Stopped,
+		"state":   services.Stopped,
 		"message": "Task stop signal sent successfully",
 	}
 

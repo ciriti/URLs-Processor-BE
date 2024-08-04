@@ -1,4 +1,4 @@
-package main
+package services
 
 type MockURLManager struct {
 	AddURLFunc              func(url string) *URLInfo

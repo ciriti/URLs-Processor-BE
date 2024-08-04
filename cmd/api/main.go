@@ -1,49 +1,40 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"net/http"
-	"os"
-	"os/signal"
+
 	"strconv"
-	"syscall"
 	"time"
 
 	"backend/internal/auth"
+	"backend/internal/services"
+	"backend/internal/utils"
 
-	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 )
 
-type application struct {
-	authenticator auth.Authenticator
-	logger        *logrus.Logger
-	urlManager    URLManagerInterface
-	taskQueue     TaskQueueInterface
-}
-
 func main() {
 	// load environment vars
-	loadEnvFiles()
+	utils.LoadEnvFiles()
 
-	jwtSecret := getEnv("JWT_SECRET", "default-secret")
+	jwtSecret := utils.GetEnv("JWT_SECRET", "default-secret")
 	if jwtSecret == "" {
 		logrus.Fatal("JWT_SECRET environment variable is required but not set")
 	}
 
-	allowedOrigin := getEnv("ALLOWED_ORIGIN", "")
+	allowedOrigin := utils.GetEnv("ALLOWED_ORIGIN", "")
 	if allowedOrigin == "" {
 		logrus.Fatal("ALLOWED_ORIGIN environment variable is required but not set")
 	}
 
-	portStr := getEnv("PORT", "")
+	portStr := utils.GetEnv("PORT", "")
 	port, err := strconv.Atoi(portStr)
 	if err != nil || port < 1 || port > 65535 {
 		logrus.Fatalf("Invalid port number: %v", portStr)
 	}
 
-	workersStrt := getEnv("WORKER_COUNT", "-1")
+	workersStrt := utils.GetEnv("WORKER_COUNT", "-1")
 	workers, err := strconv.Atoi(workersStrt)
 	if err != nil || workers < 1 || workers > 100 {
 		logrus.Fatalf("Invalid worker count: %v", workers)
@@ -53,10 +44,10 @@ func main() {
 
 	logger := logrus.New()
 	logger.SetFormatter(&logrus.JSONFormatter{})
-	urlManager := NewURLManager()
+	urlManager := services.NewURLManager()
 	client := &http.Client{Timeout: 10 * time.Second}
-	pageAnalyzer := NewPageAnalyzer(client, logger)
-	taskQueue := NewTaskQueue(workers, urlManager, pageAnalyzer,logger)
+	pageAnalyzer := services.NewPageAnalyzer(client, logger)
+	taskQueue := services.NewTaskQueue(workers, urlManager, pageAnalyzer, logger)
 
 	app := &application{
 		authenticator: authenticator,
@@ -80,44 +71,6 @@ func main() {
 		}
 	}()
 
-	gracefulShutdown(srv, logger)
+	utils.GracefulShutdown(srv, logger)
 
-}
-
-func loadEnvFiles() {
-	env := os.Getenv("APP_ENV")
-	if env == "" {
-		env = "development"
-	}
-
-	_ = godotenv.Load(".env." + env + ".local")
-	if env != "test" {
-		_ = godotenv.Load(".env.local")
-	}
-	_ = godotenv.Load(".env." + env)
-	_ = godotenv.Load()
-}
-
-// all in-flight requests are completed before the server stops
-func gracefulShutdown(srv *http.Server, logger *logrus.Logger) {
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-	logger.Println("Shutting down server...")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	if err := srv.Shutdown(ctx); err != nil {
-		logger.Fatalf("Server forced to shutdown: %v", err)
-	}
-
-	logger.Println("Server exiting")
-}
-
-func getEnv(key, defaultValue string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
-	}
-	return defaultValue
 }

@@ -1,13 +1,14 @@
-package main
+package middleware
 
 import (
+	"backend/internal/utils"
 	"net/http"
 )
 
-func (app *application) enableCORS(h http.Handler) http.Handler {
+func EnableCORS(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		allowedOrigin := getEnv("ALLOWED_ORIGIN", "http://allowed-origin.com")
+		allowedOrigin := utils.GetEnv("ALLOWED_ORIGIN", "http://allowed-origin.com")
 
 		w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
