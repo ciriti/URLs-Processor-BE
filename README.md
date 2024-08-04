@@ -8,8 +8,8 @@
 1. Clone the repository:
 
    ```sh
-   git clone https://github.com/yourusername/urls-processor.git
-   cd urls-processor
+   git clone https://github.com/ciriti/URLs-Processor-BE.git
+   cd URLs-Processor-BE
    ```
 
 2. Set up environment variables. Create a `.env` file in the root directory of the project and add the following environment variables:
@@ -57,7 +57,6 @@ WORKER_COUNT=5
 
 **Request**
 
-- **Path Parameters:** None
 - **Headers:**
   - `Content-Type`: `application/json`
 - **Body:**
@@ -87,7 +86,6 @@ WORKER_COUNT=5
 
 **Request**
 
-- **Path Parameters:** None
 - **Headers:**
   - `Content-Type`: `application/json`
 
@@ -109,7 +107,6 @@ WORKER_COUNT=5
 
 **Request**
 
-- **Path Parameters:** None
 - **Headers:**
   - `Authorization`: `Bearer {token}`
 
@@ -130,7 +127,6 @@ WORKER_COUNT=5
 
 **Request**
 
-- **Path Parameters:** None
 - **Headers:**
   - `Authorization`: `Bearer {token}`
   - `Content-Type`: `application/json`
@@ -158,7 +154,6 @@ WORKER_COUNT=5
 
 **Request**
 
-- **Path Parameters:** None
 - **Headers:**
   - `Authorization`: `Bearer {token}`
 - **Query Parameters:**
@@ -189,7 +184,6 @@ WORKER_COUNT=5
 
 **Request**
 
-- **Path Parameters:** None
 - **Headers:**
   - `Authorization`: `Bearer {token}`
   - `Content-Type`: `application/json`
@@ -222,7 +216,6 @@ WORKER_COUNT=5
 
 **Request**
 
-- **Path Parameters:** None
 - **Headers:**
   - `Authorization`: `Bearer {token}`
   - `Content-Type`: `application/json`
