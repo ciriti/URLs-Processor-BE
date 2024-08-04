@@ -31,7 +31,7 @@
 1. Build and run the Go server:
 
    ```sh
-   go run cmd/api/main.go
+   go run ./cmd/api 
    ```
 
 2. The application will start on the port specified in the `.env` file (default is 8080). You can access it via `http://localhost:8080`.
