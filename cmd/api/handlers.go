@@ -288,7 +288,7 @@ func (app *application) stopComputation(w http.ResponseWriter, r *http.Request) 
 	}
 
 	currentState := app.urlManager.GetURLState(payload.ID)
-	if currentState == services.Completed || currentState == services.Stopped {
+	if currentState == services.Completed || currentState == services.Stopped || currentState == services.Failed {
 		response := map[string]interface{}{
 			"id":      urlInfo.ID,
 			"state":   currentState,
