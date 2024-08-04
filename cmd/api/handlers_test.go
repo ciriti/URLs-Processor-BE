@@ -1,9 +1,9 @@
 package main
 
 import (
+	"backend/internal/services"
 	"bytes"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -113,43 +113,24 @@ func TestAuthenticateInvalidCredentials(t *testing.T) {
 	}
 }
 
-type MockTaskQueue struct {
-	AddTaskFunc  func(urlInfo *URLInfo) (*Task, error)
-	StopTaskFunc func(id int) (*Task, error)
-}
-
-func (m *MockTaskQueue) AddTask(urlInfo *URLInfo) (*Task, error) {
-	if m.AddTaskFunc != nil {
-		return m.AddTaskFunc(urlInfo)
-	}
-	return nil, errors.New("AddTask function not implemented")
-}
-
-func (m *MockTaskQueue) StopTask(id int) (*Task, error) {
-	if m.StopTaskFunc != nil {
-		return m.StopTaskFunc(id)
-	}
-	return nil, errors.New("StopTask function not implemented")
-}
-
 func TestStartComputation(t *testing.T) {
-	mockTaskQueue := &MockTaskQueue{
-		AddTaskFunc: func(urlInfo *URLInfo) (*Task, error) {
-			return &Task{ID: urlInfo.ID, URL: urlInfo.URL}, nil
+	mockTaskQueue := &services.MockTaskQueue{
+		AddTaskFunc: func(urlInfo *services.URLInfo) (*services.Task, error) {
+			return &services.Task{ID: urlInfo.ID, URL: urlInfo.URL}, nil
 		},
 	}
 
-	mockURLManager := &MockURLManager{
-		GetURLInfoFunc: func(id int) *URLInfo {
-			return &URLInfo{ID: id, URL: "http://example.com", State: Stopped}
+	mockURLManager := &services.MockURLManager{
+		GetURLInfoFunc: func(id int) *services.URLInfo {
+			return &services.URLInfo{ID: id, URL: "http://example.com", State: services.Stopped}
 		},
-		GetURLStateFunc: func(id int) URLState {
+		GetURLStateFunc: func(id int) services.URLState {
 			if id == 1 {
-				return Stopped
+				return services.Stopped
 			}
-			return Pending
+			return services.Pending
 		},
-		UpdateURLStateFunc: func(id int, state URLState) {
+		UpdateURLStateFunc: func(id int, state services.URLState) {
 			// Mock state update
 		},
 	}
@@ -186,5 +167,65 @@ func TestStartComputation(t *testing.T) {
 		if response[k] != v {
 			t.Errorf("handler returned unexpected body: got %v want %v", response, expected)
 		}
+	}
+}
+
+func TestAddURLsInvalidJSON(t *testing.T) {
+	mockTaskQueue := &services.MockTaskQueue{}
+	mockURLManager := &services.MockURLManager{}
+
+	logger := logrus.New()
+	app := &application{
+		taskQueue:  mockTaskQueue,
+		urlManager: mockURLManager,
+		logger:     logger,
+	}
+
+	reqBody := bytes.NewBufferString(`{"urls": ["http://example.com",`) // Invalid JSON
+	req, err := http.NewRequest(http.MethodPost, "/api/urls", reqBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(app.addURLs)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusBadRequest)
+	}
+
+	expected := `{"error":true,"message":"invalid request payload"}`
+	if rr.Body.String() != expected {
+		t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), expected)
+	}
+}
+
+func TestGetURLMissingID(t *testing.T) {
+	mockURLManager := &services.MockURLManager{}
+
+	logger := logrus.New()
+	app := &application{
+		urlManager: mockURLManager,
+		logger:     logger,
+	}
+
+	req, err := http.NewRequest(http.MethodGet, "/api/url", nil) // Missing "id" parameter
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(app.getURL)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusBadRequest)
+	}
+
+	expected := `{"error":true,"message":"missing url id parameter"}`
+	if rr.Body.String() != expected {
+		t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), expected)
 	}
 }

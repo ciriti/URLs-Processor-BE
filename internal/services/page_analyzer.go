@@ -1,4 +1,4 @@
-package main
+package services
 
 import (
 	"errors"
@@ -23,7 +23,6 @@ func NewPageAnalyzer(client *http.Client, logger *logrus.Logger) *PageAnalyzer {
 }
 
 func (pa *PageAnalyzer) AnalyzePage(url string, task *Task) (*DataInfo, error) {
-
 	pa.logger.Infof("Starting analysis for URL: %s", url)
 
 	resp, err := pa.client.Get(url)
@@ -49,6 +48,18 @@ func (pa *PageAnalyzer) AnalyzePage(url string, task *Task) (*DataInfo, error) {
 		HeadingTagsCount: make(map[string]int),
 	}
 
+	// Detect HTML version
+	if doc.FirstChild != nil && doc.FirstChild.Type == html.DoctypeNode {
+		if strings.Contains(doc.FirstChild.Data, "html") {
+			data.HTMLVersion = "HTML5"
+		} else {
+			data.HTMLVersion = "HTML 4.01"
+		}
+	} else {
+		data.HTMLVersion = "HTML 4.01"
+	}
+
+	// Traverse the document
 	var f func(*html.Node)
 	f = func(n *html.Node) {
 		if n.Type == html.ElementNode {
@@ -64,6 +75,9 @@ func (pa *PageAnalyzer) AnalyzePage(url string, task *Task) (*DataInfo, error) {
 					if attr.Key == "href" {
 						if strings.HasPrefix(attr.Val, "http") {
 							data.ExternalLinks++
+							if pa.isInaccessible(attr.Val) {
+								data.InaccessibleLinks++
+							}
 						} else {
 							data.InternalLinks++
 						}
@@ -86,4 +100,13 @@ func (pa *PageAnalyzer) AnalyzePage(url string, task *Task) (*DataInfo, error) {
 	pa.logger.Infof("Completed analysis for URL: %s", url)
 
 	return data, nil
+}
+
+func (pa *PageAnalyzer) isInaccessible(url string) bool {
+	resp, err := pa.client.Get(url)
+	if err != nil {
+		return true
+	}
+	defer resp.Body.Close()
+	return resp.StatusCode >= 400 && resp.StatusCode < 600
 }

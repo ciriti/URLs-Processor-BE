@@ -3,6 +3,8 @@ package main
 import (
 	"net/http"
 
+	appMiddleware "backend/internal/middleware"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/jwtauth"
@@ -12,7 +14,7 @@ func (app *application) routes() http.Handler {
 	mux := chi.NewRouter()
 
 	mux.Use(middleware.Recoverer)
-	mux.Use(app.enableCORS)
+	mux.Use(appMiddleware.EnableCORS)
 
 	mux.Get("/", app.Home)
 
