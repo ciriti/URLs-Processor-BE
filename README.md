@@ -51,23 +51,6 @@ WORKER_COUNT=5
 
 ### Public Endpoints
 
-#### `GET /`
-
-**Description:** Home endpoint to check the status of the application.
-
-**Request**
-
-- **Path Parameters:** None
-- **Headers:** None
-
-**Response**
-
-- **200 OK**
-  - **Fields:**
-    - `status` (string): "active"
-    - `message` (string): "URLs Processor"
-    - `version` (string): "1.0.0"
-
 #### `POST /authenticate`
 
 **Description:** Authenticate the user and receive a JWT token.
