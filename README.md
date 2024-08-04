@@ -81,6 +81,28 @@ WORKER_COUNT=5
 
 ### Protected Endpoints (require JWT token)
 
+#### `GET /logout`
+
+**Description:** Logout the user by invalidating the JWT token.
+
+**Request**
+
+- **Path Parameters:** None
+- **Headers:**
+  - `Content-Type`: `application/json`
+
+**Response**
+
+- **200 OK**
+  - **Fields:**
+    - `message` (string): "logout successful"
+- **500 Internal Server Error**
+  - **Fields:**
+    - `status` (string): "error"
+    - `message` (string): "Internal Server Error"
+
+### Protected Endpoints (require JWT token)
+
 #### `GET /api/urls`
 
 **Description:** Get all processed URLs.
