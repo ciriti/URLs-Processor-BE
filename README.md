@@ -36,17 +36,6 @@
 
 2. The application will start on the port specified in the `.env` file (default is 8080). You can access it via `http://localhost:8080`.
 
-## Example .env File
-
-Here is an example of what your `.env` file might look like:
-
-```env
-JWT_SECRET=mysecretkey
-ALLOWED_ORIGIN=http://localhost:3000
-PORT=8080
-WORKER_COUNT=5
-```
-
 ## API Endpoints
 
 ### Public Endpoints
