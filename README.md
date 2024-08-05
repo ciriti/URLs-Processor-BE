@@ -34,6 +34,13 @@
    go run cmd/api/main.go
    ```
 
+   or
+
+   ```sh
+   go build -o myserver ./cmd/api
+   ./myserver
+   ```
+
 2. The application will start on the port specified in the `.env` file (default is 8080). You can access it via `http://localhost:8080`.
 
 ## API Endpoints
